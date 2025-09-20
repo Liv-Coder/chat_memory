@@ -2,6 +2,9 @@ import '../models/message.dart';
 import '../utils/token_counter.dart';
 
 /// Result returned by a ContextStrategy
+///
+/// Contains selected messages, those excluded, any summaries produced, and a
+/// human-identifiable strategy name.
 class StrategyResult {
   final List<Message> included;
   final List<Message> excluded;
@@ -16,6 +19,9 @@ class StrategyResult {
   });
 }
 
+/// Metadata about a summarization step: `chunkId` identifies the chunk,
+/// `summary` contains the text, and `tokenEstimateBefore`/`After` capture
+/// token counts for observability.
 class SummaryInfo {
   final String chunkId;
   final String summary;
@@ -31,6 +37,9 @@ class SummaryInfo {
 }
 
 /// Abstract interface for context strategies.
+///
+/// Implementations decide which messages to include in the final prompt,
+/// which to exclude, and may optionally produce summaries for excluded chunks.
 abstract class ContextStrategy {
   /// Apply the strategy to the provided list of messages.
   /// `messages` are ordered oldest -> newest.

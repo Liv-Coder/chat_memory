@@ -1,9 +1,17 @@
 import 'dart:convert';
 
 /// Role of a message in the conversation.
+///
+/// Values:
+/// - `user`: message authored by end-user
+/// - `assistant`: message authored by the LLM/assistant
+/// - `system`: system prompt or environment message
 enum MessageRole { user, assistant, system }
 
-/// Immutable message model used by chat_memory.
+/// Immutable message model used by `chat_memory`.
+///
+/// Instances are intended to be small, serializable, and immutable. Use
+/// `copyWith` to create modified copies when needed.
 class Message {
   final String id;
   final MessageRole role;
@@ -19,6 +27,10 @@ class Message {
     this.metadata,
   });
 
+  /// Return a new `Message` with updated fields.
+  ///
+  /// Only `content` and `metadata` are supported for brevity; `id`, `role`, and
+  /// `timestamp` are preserved to maintain identity semantics.
   Message copyWith({String? content, Map<String, dynamic>? metadata}) {
     return Message(
       id: id,

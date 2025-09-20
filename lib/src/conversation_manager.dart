@@ -8,6 +8,8 @@ import 'utils/token_counter.dart';
 import 'summarizers/summarizer.dart';
 import 'summarizers/deterministic_summarizer.dart';
 
+/// Orchestrates conversation memory: persists messages, applies strategies,
+/// runs summarizers, and builds `PromptPayload` objects ready to send to an LLM.
 class ConversationManager {
   PersistenceStrategy _persistence;
   ContextStrategy _strategy;
