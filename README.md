@@ -387,7 +387,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Built with ❤️ for intelligent conversational AI**
 
 _Empowering developers to create AI applications with sophisticated memory management and natural conversation flow._
-
-```
-
-```
