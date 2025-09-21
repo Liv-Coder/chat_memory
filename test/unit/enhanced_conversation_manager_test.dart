@@ -45,7 +45,7 @@ void main() {
           embeddingService: embedding,
         );
 
-  Message? storedCallbackMsg;
+        Message? storedCallbackMsg;
 
         final manager = EnhancedConversationManager(
           persistence: null,
