@@ -132,17 +132,19 @@ class ProcessingPipelineConfig {
   factory ProcessingPipelineConfig.fromPreset(ProcessingPreset preset) {
     switch (preset) {
       case ProcessingPreset.development:
+        const devChunking = ChunkingConfig(
+          maxChunkTokens: 200,
+          strategy: ChunkingStrategy.fixedToken,
+          preserveWords: true,
+        );
         return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.sequential,
             maxConcurrency: 2,
             continueOnError: true,
+            chunkingConfig: devChunking,
           ),
-          chunkingConfig: ChunkingConfig(
-            maxChunkTokens: 200,
-            strategy: ChunkingStrategy.fixedToken,
-            preserveWords: true,
-          ),
+          chunkingConfig: devChunking,
           embeddingConfig: EmbeddingConfig(
             processingMode: ProcessingMode.sequential,
             maxBatchSize: 10,
@@ -165,18 +167,20 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.production:
+        const prodChunking = ChunkingConfig(
+          maxChunkTokens: 500,
+          strategy: ChunkingStrategy.sentenceBoundary,
+          preserveWords: true,
+          preserveSentences: true,
+        );
         return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.parallel,
             maxConcurrency: 10,
             continueOnError: false,
+            chunkingConfig: prodChunking,
           ),
-          chunkingConfig: ChunkingConfig(
-            maxChunkTokens: 500,
-            strategy: ChunkingStrategy.sentenceBoundary,
-            preserveWords: true,
-            preserveSentences: true,
-          ),
+          chunkingConfig: prodChunking,
           embeddingConfig: EmbeddingConfig(
             processingMode: ProcessingMode.parallel,
             maxBatchSize: 50,
@@ -203,17 +207,19 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.highThroughput:
+        const htChunking = ChunkingConfig(
+          maxChunkTokens: 1000,
+          strategy: ChunkingStrategy.fixedToken,
+          preserveWords: false,
+        );
         return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.parallel,
             maxConcurrency: 50,
             continueOnError: true,
+            chunkingConfig: htChunking,
           ),
-          chunkingConfig: ChunkingConfig(
-            maxChunkTokens: 1000,
-            strategy: ChunkingStrategy.fixedToken,
-            preserveWords: false,
-          ),
+          chunkingConfig: htChunking,
           embeddingConfig: EmbeddingConfig(
             processingMode: ProcessingMode.parallel,
             maxBatchSize: 200,
@@ -237,16 +243,18 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.lowLatency:
+        const llChunking = ChunkingConfig(
+          maxChunkTokens: 100,
+          strategy: ChunkingStrategy.fixedToken,
+          preserveWords: false,
+        );
         return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.sequential,
             maxConcurrency: 1,
+            chunkingConfig: llChunking,
           ),
-          chunkingConfig: ChunkingConfig(
-            maxChunkTokens: 100,
-            strategy: ChunkingStrategy.fixedToken,
-            preserveWords: false,
-          ),
+          chunkingConfig: llChunking,
           embeddingConfig: EmbeddingConfig(
             processingMode: ProcessingMode.sequential,
             maxBatchSize: 1,
@@ -269,16 +277,18 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.memoryOptimized:
+        const moChunking = ChunkingConfig(
+          maxChunkTokens: 50,
+          strategy: ChunkingStrategy.slidingWindow,
+          overlapRatio: 0.05,
+        );
         return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.sequential,
             maxConcurrency: 2,
+            chunkingConfig: moChunking,
           ),
-          chunkingConfig: ChunkingConfig(
-            maxChunkTokens: 50,
-            strategy: ChunkingStrategy.slidingWindow,
-            overlapRatio: 0.05,
-          ),
+          chunkingConfig: moChunking,
           embeddingConfig: EmbeddingConfig(
             processingMode: ProcessingMode.sequential,
             maxBatchSize: 5,

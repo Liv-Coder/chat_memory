@@ -8,11 +8,38 @@ This project adheres to the "Keep a Changelog" format and follows
 
 ### Added
 
-- Placeholder for upcoming improvements and maintenance releases.
+- Message chunking system (`MessageChunker`) with configurable strategies:
+
+  - Fixed token/character, word/sentence/paragraph boundaries, sliding window with overlap, delimiter-based chunking, and a placeholder for semantic-aware chunking.
+  - Chunking configuration options (max tokens/chars, overlap ratio, preserve word/sentence boundaries, custom delimiters, max chunks).
+  - Chunk statistics and logging (total chunks, average size, size distribution) for diagnostics and performance tuning.
+
+- Advanced embedding pipeline (`EmbeddingPipeline`) with resilience and optimization:
+
+  - Processing modes: `sequential`, `parallel`, and `adaptive` for dynamic batching.
+  - Circuit breaker and retry strategies (immediate, linear, exponential) to handle external embedding service failures.
+  - Caching of embeddings with configurable TTL and maximum size, plus cache hit-rate tracking.
+  - Embedding validation, normalization, and quality thresholding to ensure vector integrity.
+  - Rate limiting and dynamic batch-size adaptation based on recent performance.
+  - Detailed embedding statistics and failure reporting.
+
+- Message processing orchestrator (`MessageProcessor`) and supporting APIs:
+
+  - Configurable processing stages (validation, chunking, embedding, storage, post-processing).
+  - Processing configuration options including concurrency, continue-on-error, and stage ordering.
+  - Structured result and stats models (`ProcessingResult`, `ProcessingStats`, `ProcessingError`) for observability.
+  - Builder / factory helpers for common processor setups (basic, development, production).
+  - Health and component statistics methods to expose chunker/embedding status and metrics.
+
+- Processing utilities and integrations:
+  - `ProcessingConfig`, `ProcessingStage`, and related enums and models to support flexible pipelines.
+  - Integration with token counting, session storage, and vector stores for end-to-end processing flows.
+  - Unit and integration tests covering chunking, embedding, and processing flows.
 
 ### Changed
 
-- N/A
+- Documentation: expanded API docs and examples to document the new processing, chunking, and embedding features.
+- Tests: improved timing/statistics assertions to ensure non-zero reported times for short runs.
 
 ### Fixed
 

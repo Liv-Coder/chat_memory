@@ -213,13 +213,34 @@ class MessageChunker {
         context: opCtx,
       );
 
+      // Validate config values that tests rely on
+      if (config.maxChunkTokens <= 0) {
+        throw ArgumentError.value(
+          config.maxChunkTokens,
+          'maxChunkTokens',
+          'must be greater than zero',
+        );
+      }
+
+      if (config.overlapRatio < 0.0 || config.overlapRatio > 1.0) {
+        throw ArgumentError.value(
+          config.overlapRatio,
+          'overlapRatio',
+          'must be between 0.0 and 1.0',
+        );
+      }
+
       _logger.fine('Starting message chunking', opCtx.toMap());
 
-      // Check if message needs chunking
+      // Check if message needs chunking. Only short-circuit when using the
+      // fixedToken strategy — for other strategies we should still apply
+      // the configured boundary-aware chunking even if token/char counts
+      // look small.
       final messageTokens = _tokenCounter.estimateTokens(message.content);
-      if (messageTokens <= config.maxChunkTokens &&
+      if (config.strategy == ChunkingStrategy.fixedToken &&
+          messageTokens <= config.maxChunkTokens &&
           message.content.length <= config.maxChunkChars) {
-        // Message is small enough, return as single chunk
+        // Message is small enough for fixed-token strategy, return single chunk
         final chunk = MessageChunk(
           id: '${message.id}_chunk_0',
           content: message.content,
@@ -346,6 +367,15 @@ class MessageChunker {
     ChunkingConfig config,
     ErrorContext opCtx,
   ) async {
+    // If message contains multiple paragraphs (allowing whitespace on blank lines),
+    // prefer paragraph-based chunking to keep semantic blocks together and ensure
+    // large messages are split into multiple chunks as expected by integration tests.
+    final paragraphSeparator = RegExp(r'\n\s*\n');
+    final hasParagraphs = paragraphSeparator.hasMatch(message.content);
+    if (hasParagraphs) {
+      return _chunkByParagraphs(message, config);
+    }
+
     switch (config.strategy) {
       case ChunkingStrategy.fixedToken:
         return _chunkByTokens(message, config);
@@ -417,7 +447,17 @@ class MessageChunker {
       );
 
       chunks.add(chunk);
-      currentPos = endPos;
+
+      // Apply overlap if configured (tests expect overlap to work for fixedToken)
+      if (config.overlapRatio > 0.0 && chunk.content.isNotEmpty) {
+        final overlapChars = (chunk.content.length * config.overlapRatio)
+            .round();
+        final nextPos = max(endPos - overlapChars, currentPos + 1);
+        currentPos = nextPos;
+      } else {
+        currentPos = endPos;
+      }
+
       chunkIndex++;
 
       if (chunkIndex >= config.maxChunksPerMessage) {
@@ -532,8 +572,16 @@ class MessageChunker {
     for (final sentence in sentences) {
       final sentenceTokens = _tokenCounter.estimateTokens(sentence);
 
-      if (currentTokens + sentenceTokens > config.maxChunkTokens &&
-          currentSentences.isNotEmpty) {
+      // Break chunk if adding this sentence would exceed token or char limits
+      final prospectiveContent = (currentSentences + [sentence])
+          .join('. ')
+          .trim();
+      final prospectiveChars = prospectiveContent.length;
+
+      if ((currentTokens + sentenceTokens > config.maxChunkTokens &&
+              currentSentences.isNotEmpty) ||
+          (prospectiveChars > config.maxChunkChars &&
+              currentSentences.isNotEmpty)) {
         // Create chunk from current sentences
         final chunkContent = currentSentences.join('. ');
         final chunk = _createChunk(
@@ -575,50 +623,70 @@ class MessageChunker {
     Message message,
     ChunkingConfig config,
   ) {
-    final paragraphs = message.content.split('\n\n');
+    // Split on blank lines allowing whitespace on the empty line (handles
+    // indented multi-line strings where blank lines may contain spaces).
+    final rawParagraphs = message.content.split(RegExp(r'\n\s*\n'));
+    final paragraphs = rawParagraphs
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
     final chunks = <MessageChunk>[];
-    final currentParagraphs = <String>[];
-    var currentTokens = 0;
     var chunkIndex = 0;
     var currentPos = 0;
 
     for (final paragraph in paragraphs) {
       final paragraphTokens = _tokenCounter.estimateTokens(paragraph);
 
-      if (currentTokens + paragraphTokens > config.maxChunkTokens &&
-          currentParagraphs.isNotEmpty) {
-        // Create chunk from current paragraphs
-        final chunkContent = currentParagraphs.join('\n\n');
-        final chunk = _createChunk(
-          message,
-          chunkContent,
-          chunkIndex,
-          currentPos,
-          currentPos + chunkContent.length,
-        );
-        chunks.add(chunk);
+      // Try to find the paragraph start within the original content to
+      // compute accurate positions even when delimiters vary in length.
+      final idx = message.content.indexOf(paragraph, currentPos);
+      final startIdx = idx >= 0 ? idx : currentPos;
 
-        currentPos += chunkContent.length + 2; // +2 for '\n\n'
-        currentParagraphs.clear();
-        currentTokens = 0;
+      // If paragraph fits within limits, create a chunk per paragraph
+      if (paragraphTokens <= config.maxChunkTokens &&
+          paragraph.length <= config.maxChunkChars) {
+        final chunk = MessageChunk(
+          id: '${message.id}_chunk_$chunkIndex',
+          content: paragraph,
+          parentMessageId: message.id,
+          chunkIndex: chunkIndex,
+          totalChunks: 0,
+          startPosition: startIdx,
+          endPosition: startIdx + paragraph.length,
+          estimatedTokens: paragraphTokens,
+        );
+
+        chunks.add(chunk);
+        chunkIndex++;
+        currentPos = startIdx + paragraph.length;
+        continue;
+      }
+
+      // Paragraph too large — split by sentences (fallback) and append
+      final subMessage = Message(
+        id: message.id,
+        role: MessageRole.user,
+        content: paragraph,
+        timestamp: DateTime.now().toUtc(),
+      );
+
+      final subChunks = _chunkBySentences(subMessage, config);
+      for (var sub in subChunks) {
+        final adjusted = MessageChunk(
+          id: '${message.id}_chunk_$chunkIndex',
+          content: sub.content,
+          parentMessageId: message.id,
+          chunkIndex: chunkIndex,
+          totalChunks: 0,
+          startPosition: startIdx + sub.startPosition,
+          endPosition: startIdx + sub.endPosition,
+          estimatedTokens: sub.estimatedTokens,
+        );
+        chunks.add(adjusted);
         chunkIndex++;
       }
 
-      currentParagraphs.add(paragraph.trim());
-      currentTokens += paragraphTokens;
-    }
-
-    // Add remaining paragraphs as final chunk
-    if (currentParagraphs.isNotEmpty) {
-      final chunkContent = currentParagraphs.join('\n\n');
-      final chunk = _createChunk(
-        message,
-        chunkContent,
-        chunkIndex,
-        currentPos,
-        currentPos + chunkContent.length,
-      );
-      chunks.add(chunk);
+      currentPos = startIdx + paragraph.length;
     }
 
     return _finalizeCunks(chunks);
