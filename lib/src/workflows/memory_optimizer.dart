@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:logging/logging.dart';
 
-import '../memory/memory_cleaner.dart';
 import '../core/persistence/persistence_strategy.dart';
 import '../memory/vector_stores/vector_store.dart';
 import '../core/models/message.dart';
@@ -196,7 +195,6 @@ class RollbackInfo {
 
 /// Advanced memory optimizer with automatic cleanup and archiving
 class MemoryOptimizer {
-  final MemoryCleaner _memoryCleaner;
   final PersistenceStrategy _persistenceStrategy;
   final VectorStore _vectorStore;
   final Logger _logger;
@@ -212,14 +210,12 @@ class MemoryOptimizer {
   Completer<OptimizationResult>? _currentOperation;
 
   MemoryOptimizer({
-    required MemoryCleaner memoryCleaner,
     required PersistenceStrategy persistenceStrategy,
     required VectorStore vectorStore,
     Logger? logger,
     OptimizationConfig? config,
     PersistenceStrategy? archiveStorage,
-  }) : _memoryCleaner = memoryCleaner,
-       _persistenceStrategy = persistenceStrategy,
+  }) : _persistenceStrategy = persistenceStrategy,
        _vectorStore = vectorStore,
        _logger = logger ?? ChatMemoryLogger.loggerFor('MemoryOptimizer'),
        _config = config ?? const OptimizationConfig(),

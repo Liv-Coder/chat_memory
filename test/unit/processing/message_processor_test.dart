@@ -294,6 +294,7 @@ void main() {
 
       final result = await processor.processMessages(messages, config);
 
+      expect(result, isNotNull);
       expect(mockSessionStore.storedMessages.length, equals(1));
       expect(
         mockSessionStore.storedMessages.first.content,

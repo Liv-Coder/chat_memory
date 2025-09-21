@@ -8,12 +8,27 @@
 /// ```dart
 /// import 'package:chat_memory/chat_memory.dart';
 ///
+/// // Simple usage with the new facade API
+/// final chatMemory = await ChatMemory.development();
+/// await chatMemory.addMessage('Hello!', role: 'user');
+/// final context = await chatMemory.getContext();
+/// print(context.promptText);
+///
+/// // Advanced usage with the original API
 /// final manager = await EnhancedConversationManager.create();
 /// await manager.appendUserMessage('Hello');
 /// final prompt = await manager.buildPrompt(clientTokenBudget: 4000);
 /// print(prompt.promptText);
 /// ```
 library;
+
+// -------------------------
+// Simplified ChatMemory API
+// -------------------------
+export 'chat_memory_facade.dart';
+export 'chat_memory_builder.dart';
+export 'chat_context.dart';
+export 'chat_memory_config.dart';
 
 // -------------------------
 // Core models and payloads

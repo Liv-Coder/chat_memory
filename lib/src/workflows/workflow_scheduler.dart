@@ -655,7 +655,7 @@ class WorkflowScheduler {
         _logger.fine(
           'Completed task ${task.id} in ${stopwatch.elapsed.inMilliseconds}ms',
         );
-      } catch (e, stackTrace) {
+      } catch (e) {
         _logger.severe('Task ${task.id} failed: $e');
 
         taskResults[task.id] = {'status': 'failed', 'error': e.toString()};
@@ -833,9 +833,10 @@ class WorkflowScheduler {
         config: {...trigger.config, 'lastCheck': now},
       );
 
-      // This would normally check actual memory usage
-      final shouldTrigger =
-          math.Random().nextDouble() > 0.95; // Simulated check
+      // This would normally check actual memory usage against the threshold
+      final currentMemoryUsage = math.Random()
+          .nextDouble(); // Simulated memory usage
+      final shouldTrigger = currentMemoryUsage > memoryThreshold;
 
       if (shouldTrigger) {
         _executeTrigger(workflowId, updatedTrigger);

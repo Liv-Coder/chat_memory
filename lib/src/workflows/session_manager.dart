@@ -528,22 +528,29 @@ class SessionManager {
   bool _matchesFilter(SessionMetadata session, SessionFilter? filter) {
     if (filter == null) return true;
 
-    if (filter.state != null && session.state != filter.state) return false;
+    if (filter.state != null && session.state != filter.state) {
+      return false;
+    }
     if (filter.titlePattern != null &&
-        !session.title.contains(filter.titlePattern!))
+        !session.title.contains(filter.titlePattern!)) {
       return false;
+    }
     if (filter.createdAfter != null &&
-        session.createdAt.isBefore(filter.createdAfter!))
+        session.createdAt.isBefore(filter.createdAfter!)) {
       return false;
+    }
     if (filter.createdBefore != null &&
-        session.createdAt.isAfter(filter.createdBefore!))
+        session.createdAt.isAfter(filter.createdBefore!)) {
       return false;
+    }
     if (filter.minMessageCount != null &&
-        session.messageCount < filter.minMessageCount!)
+        session.messageCount < filter.minMessageCount!) {
       return false;
+    }
     if (filter.maxMessageCount != null &&
-        session.messageCount > filter.maxMessageCount!)
+        session.messageCount > filter.maxMessageCount!) {
       return false;
+    }
 
     return true;
   }

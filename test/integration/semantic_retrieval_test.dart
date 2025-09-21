@@ -1,6 +1,5 @@
 import 'package:chat_memory/chat_memory.dart';
 import 'package:test/test.dart';
-import 'package:chat_memory/src/memory/memory_manager.dart';
 import '../test_utils.dart';
 
 void main() {
