@@ -33,8 +33,6 @@ topics:
   - memory
   - chat
 
-publish_to: "https://pub.dev"
-
 # Dependencies
 dependencies:
   logging: ^1.2.0
