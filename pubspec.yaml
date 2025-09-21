@@ -33,7 +33,6 @@ topics:
   - memory
   - chat
 
-# Where to publish; remove or change if you don't want to publish to pub.dev
 publish_to: "https://pub.dev"
 
 # Dependencies

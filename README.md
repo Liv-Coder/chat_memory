@@ -1,10 +1,22 @@
 # Chat Memory - Intelligent Conversation Memory
 
+<p align="center">
+  <img src="chat_memory.jpeg" alt="ChatMemory logo" width="360" />
+</p>
+
 A powerful Dart package that provides **intelligent memory management** for conversational AI applications with **automatic system prompts**, **semantic retrieval**, and **hybrid memory architecture**.
 
 [![pub version](https://img.shields.io/pub/v/chat_memory.svg)](https://pub.dev/packages/chat_memory)
 [![build](https://img.shields.io/github/actions/workflow/status/Liv-Coder/chat_memory/ci.yml?branch=main)](https://github.com/Liv-Coder/chat_memory/actions)
 [![license](https://img.shields.io/pub/license/chat_memory.svg)](https://pub.dev/packages/chat_memory)
+
+## Screenshot's
+
+<p align="center">
+  <a href="screenshots/screenshot_1.jpg"><img src="screenshots/screenshot_1.jpg" alt="screenshot 1" width="280" style="margin:8px;"/></a>
+  <a href="screenshots/screenshot_2.jpg"><img src="screenshots/screenshot_2.jpg" alt="screenshot 2" width="280" style="margin:8px;"/></a>
+  <a href="screenshots/screenshot_3.jpg"><img src="screenshots/screenshot_3.jpg" alt="screenshot 3" width="280" style="margin:8px;"/></a>
+</p>
 
 ## 🚀 Quick Start
 

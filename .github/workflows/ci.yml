@@ -14,12 +14,12 @@ jobs:
         sdk: [stable]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          sdk: ${{ matrix.sdk }}
+          flutter-version: ${{ matrix.sdk }}
       - name: Get dependencies
-        run: dart pub get
+        run: flutter pub get
       - name: Static analysis
         run: dart analyze
       - name: Run unit tests
@@ -30,12 +30,12 @@ jobs:
     needs: analyze-and-test
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          sdk: stable
+          flutter-version: stable
       - name: Get dependencies
-        run: dart pub get
+        run: flutter pub get
       - name: Run integration tests (allowed to fail)
         run: dart test test/integration --reporter expanded
         continue-on-error: true
