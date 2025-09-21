@@ -1,14 +1,14 @@
-import 'models/message.dart';
-import 'models/prompt_payload.dart';
-import 'persistence/persistence_strategy.dart';
-import 'persistence/in_memory_store.dart';
-import 'strategies/context_strategy.dart';
-import 'strategies/sliding_window_strategy.dart';
-import 'utils/token_counter.dart';
+import '../core/models/message.dart';
+import '../core/models/prompt_payload.dart';
+import '../core/persistence/persistence_strategy.dart';
+import '../core/persistence/in_memory_store.dart';
+import '../memory/strategies/context_strategy.dart';
+import '../memory/strategies/sliding_window_strategy.dart';
+import '../core/utils/token_counter.dart';
 import 'follow_up/follow_up_generator.dart';
-import 'summarizers/summarizer.dart';
-import 'summarizers/deterministic_summarizer.dart';
-import 'summarizers/summarization_config.dart';
+import '../memory/summarizers/summarizer.dart';
+import '../memory/summarizers/deterministic_summarizer.dart';
+import '../memory/summarizers/summarization_config.dart';
 
 /// Orchestrates conversation memory: persists messages, applies strategies,
 /// runs summarizers, and builds `PromptPayload` objects ready to send to an LLM.

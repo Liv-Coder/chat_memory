@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:test/test.dart';
-import 'package:chat_memory/src/embeddings/simple_embedding_service.dart';
+import 'package:chat_memory/src/memory/embeddings/simple_embedding_service.dart';
 
 void main() {
   group('SimpleEmbeddingService', () {

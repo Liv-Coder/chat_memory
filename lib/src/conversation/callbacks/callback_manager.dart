@@ -1,6 +1,6 @@
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
-import '../models/message.dart';
+import '../../core/errors.dart';
+import '../../core/logging/chat_memory_logger.dart';
+import '../../core/models/message.dart';
 
 /// Callback function type for message storage events
 typedef MessageStoredCallback = void Function(Message message);

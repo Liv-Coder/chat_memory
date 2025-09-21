@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'context_strategy.dart';
-import '../models/message.dart';
-import '../utils/token_counter.dart';
+import '../../core/models/message.dart';
+import '../../core/utils/token_counter.dart';
 
 /// Sliding window strategy: include the most recent messages until tokenBudget is reached.
 class SlidingWindowStrategy implements ContextStrategy {

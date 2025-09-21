@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import '../models/message.dart';
-import '../utils/token_counter.dart';
+import '../../core/models/message.dart';
+import '../../core/utils/token_counter.dart';
 import '../summarizers/summarizer.dart';
 import 'context_strategy.dart';
 
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../../core/errors.dart';
+import '../../core/logging/chat_memory_logger.dart';
 
 /// Configuration for the summarization strategy
 class SummarizationStrategyConfig {

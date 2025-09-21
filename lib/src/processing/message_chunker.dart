@@ -1,9 +1,9 @@
 import 'dart:math';
 
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
-import '../models/message.dart';
-import '../utils/token_counter.dart';
+import '../core/errors.dart';
+import '../core/logging/chat_memory_logger.dart';
+import '../core/models/message.dart';
+import '../core/utils/token_counter.dart';
 
 /// Chunking strategies for different content types
 enum ChunkingStrategy {

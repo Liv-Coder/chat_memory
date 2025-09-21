@@ -1,4 +1,4 @@
-import '../errors.dart';
+import '../core/errors.dart';
 import 'message_chunker.dart';
 import 'embedding_pipeline.dart';
 import 'message_processor.dart';

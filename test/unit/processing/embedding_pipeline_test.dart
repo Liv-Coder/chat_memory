@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
 import 'package:chat_memory/src/processing/embedding_pipeline.dart';
 import 'package:chat_memory/src/processing/message_chunker.dart';
-import 'package:chat_memory/src/embeddings/embedding_service.dart'
+import 'package:chat_memory/src/memory/embeddings/embedding_service.dart'
     hide EmbeddingConfig;
 
 /// Mock embedding service for testing

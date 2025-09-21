@@ -1,8 +1,8 @@
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
-import '../models/message.dart';
-import '../utils/token_counter.dart';
-import '../memory/memory_manager.dart';
+import '../../core/errors.dart';
+import '../../core/logging/chat_memory_logger.dart';
+import '../../core/models/message.dart';
+import '../../core/utils/token_counter.dart';
+import '../../memory/memory_manager.dart';
 
 /// Statistics about a conversation
 class ConversationStats {

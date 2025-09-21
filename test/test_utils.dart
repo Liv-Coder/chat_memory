@@ -1,7 +1,7 @@
-import 'package:chat_memory/src/models/message.dart';
-import 'package:chat_memory/src/vector_stores/vector_store.dart';
-import 'package:chat_memory/src/strategies/context_strategy.dart';
-import 'package:chat_memory/src/utils/token_counter.dart';
+import 'package:chat_memory/src/core/models/message.dart';
+import 'package:chat_memory/src/memory/vector_stores/vector_store.dart';
+import 'package:chat_memory/src/memory/strategies/context_strategy.dart';
+import 'package:chat_memory/src/core/utils/token_counter.dart';
 
 /// Shared test utilities for unit and integration tests.
 

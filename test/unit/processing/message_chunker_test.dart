@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
 import 'package:chat_memory/src/processing/message_chunker.dart';
-import 'package:chat_memory/src/models/message.dart';
-import 'package:chat_memory/src/utils/token_counter.dart';
+import 'package:chat_memory/src/core/models/message.dart';
+import 'package:chat_memory/src/core/utils/token_counter.dart';
 import '../../test_utils.dart';
 
 void main() {

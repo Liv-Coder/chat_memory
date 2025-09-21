@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:logging/logging.dart';
 
-import '../models/message.dart';
-import '../utils/token_counter.dart';
-import '../strategies/context_strategy.dart';
-import '../vector_stores/vector_store.dart';
-import '../embeddings/embedding_service.dart';
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../core/models/message.dart';
+import '../core/utils/token_counter.dart';
+import 'strategies/context_strategy.dart';
+import 'vector_stores/vector_store.dart';
+import 'embeddings/embedding_service.dart';
+import '../core/errors.dart';
+import '../core/logging/chat_memory_logger.dart';
 import 'session_store.dart';
 import 'memory_summarizer.dart';
 import 'semantic_retriever.dart';

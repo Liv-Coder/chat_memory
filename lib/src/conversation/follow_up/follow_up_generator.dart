@@ -1,4 +1,4 @@
-import '../models/message.dart';
+import '../../core/models/message.dart';
 
 /// Pluggable interface for generating contextual follow-up questions
 abstract class FollowUpGenerator {

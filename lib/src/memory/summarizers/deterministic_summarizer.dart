@@ -1,10 +1,10 @@
 import 'summarizer.dart';
-import '../models/message.dart';
+import '../../core/models/message.dart';
 import '../strategies/context_strategy.dart';
-import '../utils/token_counter.dart';
+import '../../core/utils/token_counter.dart';
 
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../../core/errors.dart';
+import '../../core/logging/chat_memory_logger.dart';
 
 /// Simple deterministic summarizer: join messages and truncate to a target char length.
 /// Adds validation, logging and error handling to be production-safe.

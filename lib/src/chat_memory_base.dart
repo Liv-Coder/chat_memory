@@ -18,23 +18,23 @@ library;
 // -------------------------
 // Core models and payloads
 // -------------------------
-export 'models/message.dart';
-export 'models/prompt_payload.dart';
+export 'core/models/message.dart';
+export 'core/models/prompt_payload.dart';
 
 // -------------------------
-// Token utilities
+// Core utilities
 // -------------------------
-export 'utils/token_counter.dart';
-export 'utils/message_operations.dart';
-export 'utils/token_calculations.dart';
+export 'core/utils/token_counter.dart';
+export 'core/utils/message_operations.dart';
+export 'core/utils/token_calculations.dart';
 
 // -------------------------
 // Conversation management
 // -------------------------
-export 'conversation_manager.dart';
-export 'enhanced_conversation_manager.dart';
-export 'callbacks/callback_manager.dart';
-export 'analytics/conversation_analytics.dart';
+export 'conversation/conversation_manager.dart';
+export 'conversation/enhanced_conversation_manager.dart';
+export 'conversation/callbacks/callback_manager.dart';
+export 'conversation/analytics/conversation_analytics.dart';
 
 // -------------------------
 // Memory orchestration
@@ -44,34 +44,35 @@ export 'memory/hybrid_memory_factory.dart';
 export 'memory/session_store.dart';
 export 'memory/memory_summarizer.dart';
 export 'memory/semantic_retriever.dart';
+export 'memory/memory_cleaner.dart';
 
 // -------------------------
-// Strategies & Summarizers
+// Memory strategies & summarizers
 // -------------------------
-export 'strategies/context_strategy.dart';
-export 'strategies/sliding_window_strategy.dart';
-export 'strategies/summarization_strategy.dart';
-export 'summarizers/summarizer.dart';
-export 'summarizers/deterministic_summarizer.dart';
-export 'summarizers/summarization_config.dart';
+export 'memory/strategies/context_strategy.dart';
+export 'memory/strategies/sliding_window_strategy.dart';
+export 'memory/strategies/summarization_strategy.dart';
+export 'memory/summarizers/summarizer.dart';
+export 'memory/summarizers/deterministic_summarizer.dart';
+export 'memory/summarizers/summarization_config.dart';
 
 // -------------------------
-// Persistence
+// Core persistence
 // -------------------------
-export 'persistence/persistence_strategy.dart';
-export 'persistence/in_memory_store.dart';
+export 'core/persistence/persistence_strategy.dart';
+export 'core/persistence/in_memory_store.dart';
 
 // -------------------------
-// Semantic components
+// Memory semantic components
 // -------------------------
-export 'embeddings/embedding_service.dart' hide EmbeddingConfig;
-export 'embeddings/simple_embedding_service.dart';
-export 'vector_stores/vector_store.dart';
-export 'vector_stores/local_vector_store.dart';
-export 'vector_stores/in_memory_vector_store.dart';
+export 'memory/embeddings/embedding_service.dart' hide EmbeddingConfig;
+export 'memory/embeddings/simple_embedding_service.dart';
+export 'memory/vector_stores/vector_store.dart';
+export 'memory/vector_stores/local_vector_store.dart';
+export 'memory/vector_stores/in_memory_vector_store.dart';
 
 // -------------------------
-// Advanced Processing Pipeline
+// Data processing pipeline
 // -------------------------
 export 'processing/message_chunker.dart';
 export 'processing/embedding_pipeline.dart';
@@ -79,12 +80,21 @@ export 'processing/message_processor.dart';
 export 'processing/processing_config.dart';
 
 // -------------------------
-// Misc utilities
+// Memory management workflows
 // -------------------------
-export 'follow_up/follow_up_generator.dart';
+export 'workflows/memory_optimizer.dart' hide OptimizationResult;
+export 'workflows/session_manager.dart';
+export 'workflows/retention_policy.dart';
+export 'workflows/workflow_scheduler.dart';
+export 'workflows/memory_monitor.dart';
 
 // -------------------------
-// Error handling & Logging
+// Conversation utilities
 // -------------------------
-export 'errors.dart';
-export 'logging/chat_memory_logger.dart';
+export 'conversation/follow_up/follow_up_generator.dart';
+
+// -------------------------
+// Core error handling & logging
+// -------------------------
+export 'core/errors.dart';
+export 'core/logging/chat_memory_logger.dart';

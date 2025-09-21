@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'message_chunker.dart';
 import 'embedding_pipeline.dart';
-import '../vector_stores/vector_store.dart';
+import '../memory/vector_stores/vector_store.dart';
 import '../memory/session_store.dart';
-import '../models/message.dart';
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../core/models/message.dart';
+import '../core/errors.dart';
+import '../core/logging/chat_memory_logger.dart';
 
 /// Processing stages that can be executed
 enum ProcessingStage {

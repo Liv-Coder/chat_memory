@@ -1,5 +1,5 @@
-import '../models/message.dart';
-import '../utils/token_counter.dart';
+import '../../core/models/message.dart';
+import '../../core/utils/token_counter.dart';
 
 /// Result returned by a ContextStrategy
 ///

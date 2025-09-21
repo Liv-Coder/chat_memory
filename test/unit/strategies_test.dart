@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:chat_memory/src/strategies/summarization_strategy.dart';
-import 'package:chat_memory/src/summarizers/deterministic_summarizer.dart';
+import 'package:chat_memory/src/memory/strategies/summarization_strategy.dart';
+import 'package:chat_memory/src/memory/summarizers/deterministic_summarizer.dart';
 import '../test_utils.dart';
 
 void main() {

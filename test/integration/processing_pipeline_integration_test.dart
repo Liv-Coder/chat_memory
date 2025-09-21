@@ -3,12 +3,12 @@ import 'package:chat_memory/src/processing/message_processor.dart';
 import 'package:chat_memory/src/processing/message_chunker.dart';
 import 'package:chat_memory/src/processing/embedding_pipeline.dart';
 import 'package:chat_memory/src/processing/processing_config.dart';
-import 'package:chat_memory/src/embeddings/simple_embedding_service.dart';
-import 'package:chat_memory/src/vector_stores/in_memory_vector_store.dart';
+import 'package:chat_memory/src/memory/embeddings/simple_embedding_service.dart';
+import 'package:chat_memory/src/memory/vector_stores/in_memory_vector_store.dart';
 import 'package:chat_memory/src/memory/session_store.dart';
 import 'package:chat_memory/src/memory/memory_manager.dart';
-import 'package:chat_memory/src/models/message.dart';
-import 'package:chat_memory/src/utils/token_counter.dart';
+import 'package:chat_memory/src/core/models/message.dart';
+import 'package:chat_memory/src/core/utils/token_counter.dart';
 import '../test_utils.dart';
 
 void main() {

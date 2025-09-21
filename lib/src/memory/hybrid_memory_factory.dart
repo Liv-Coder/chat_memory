@@ -1,15 +1,15 @@
-import '../utils/token_counter.dart';
-import '../summarizers/summarizer.dart';
-import '../summarizers/deterministic_summarizer.dart';
-import '../strategies/context_strategy.dart';
-import '../strategies/summarization_strategy.dart';
-import '../vector_stores/vector_store.dart';
-import '../vector_stores/local_vector_store.dart';
-import '../vector_stores/in_memory_vector_store.dart';
-import '../embeddings/embedding_service.dart';
-import '../embeddings/simple_embedding_service.dart';
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../core/utils/token_counter.dart';
+import 'summarizers/summarizer.dart';
+import 'summarizers/deterministic_summarizer.dart';
+import 'strategies/context_strategy.dart';
+import 'strategies/summarization_strategy.dart';
+import 'vector_stores/vector_store.dart';
+import 'vector_stores/local_vector_store.dart';
+import 'vector_stores/in_memory_vector_store.dart';
+import 'embeddings/embedding_service.dart';
+import 'embeddings/simple_embedding_service.dart';
+import '../core/errors.dart';
+import '../core/logging/chat_memory_logger.dart';
 import 'memory_manager.dart';
 
 /// Configuration preset for different use cases

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../embeddings/embedding_service.dart';
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../memory/embeddings/embedding_service.dart';
+import '../core/errors.dart';
+import '../core/logging/chat_memory_logger.dart';
 import 'message_chunker.dart';
 
 /// Processing modes for embedding pipeline

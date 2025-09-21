@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
-import 'package:chat_memory/src/vector_stores/in_memory_vector_store.dart';
-import 'package:chat_memory/src/vector_stores/local_vector_store.dart';
-import 'package:chat_memory/src/vector_stores/vector_store.dart';
+import 'package:chat_memory/src/memory/vector_stores/in_memory_vector_store.dart';
+import 'package:chat_memory/src/memory/vector_stores/local_vector_store.dart';
+import 'package:chat_memory/src/memory/vector_stores/vector_store.dart';
 import '../test_utils.dart';
 
 void main() {

@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
-import 'package:chat_memory/src/enhanced_conversation_manager.dart';
+import 'package:chat_memory/src/conversation/enhanced_conversation_manager.dart';
 import 'package:chat_memory/src/memory/hybrid_memory_factory.dart';
-import 'package:chat_memory/src/follow_up/follow_up_generator.dart';
+import 'package:chat_memory/src/conversation/follow_up/follow_up_generator.dart';
 
 class SimpleFollowUp implements FollowUpGenerator {
   @override

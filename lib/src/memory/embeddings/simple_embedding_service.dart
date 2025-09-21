@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../../core/errors.dart';
+import '../../core/logging/chat_memory_logger.dart';
 import 'embedding_service.dart';
 
 /// Simple deterministic embedding service for testing and development

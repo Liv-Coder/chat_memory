@@ -1,8 +1,8 @@
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
-import '../models/message.dart';
-import '../vector_stores/vector_store.dart';
-import '../embeddings/embedding_service.dart';
+import '../core/errors.dart';
+import '../core/logging/chat_memory_logger.dart';
+import '../core/models/message.dart';
+import 'vector_stores/vector_store.dart';
+import 'embeddings/embedding_service.dart';
 import 'memory_manager.dart';
 
 /// Handles message persistence and vector storage operations

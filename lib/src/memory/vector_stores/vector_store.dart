@@ -1,4 +1,4 @@
-import '../models/message.dart';
+import '../../core/models/message.dart';
 
 /// Represents a vector embedding with associated metadata
 class VectorEntry {

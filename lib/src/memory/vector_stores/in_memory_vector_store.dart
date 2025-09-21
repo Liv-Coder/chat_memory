@@ -1,39 +1,36 @@
 import 'dart:math';
 
-import '../errors.dart';
-import '../logging/chat_memory_logger.dart';
+import '../../core/errors.dart';
+import '../../core/logging/chat_memory_logger.dart';
 import 'vector_store.dart';
 
-/// Local vector store implementation that behaves like a simple persistent
-/// vector store but operates in-memory. Enhanced with validation, logging,
-/// and robust error handling to avoid silent failures.
-class LocalVectorStore implements VectorStore {
+/// In-memory implementation of VectorStore for testing and lightweight usage.
+///
+/// Enhanced with validation, logging, and basic memory pressure protection.
+/// Optional `expectedDimension` enforces embedding size consistency.
+/// Optional `maxEntries` enables a simple LRU eviction policy to avoid
+/// unbounded memory growth in long-running processes.
+class InMemoryVectorStore implements VectorStore {
   final Map<String, VectorEntry> _entries = {};
-  final String _databasePath;
-  final String _tableName;
   final int? _expectedDimension;
+  final int? _maxEntries;
+  final _lru = <String, DateTime>{};
 
-  final _logger = ChatMemoryLogger.loggerFor('vector_store.local');
+  final _logger = ChatMemoryLogger.loggerFor('vector_store.in_memory');
 
-  LocalVectorStore({
-    String? databasePath,
-    String tableName = 'vector_embeddings',
-    int? expectedDimension,
-  }) : _databasePath = databasePath ?? 'chat_memory_vectors.db',
-       _tableName = tableName,
-       _expectedDimension = expectedDimension {
+  InMemoryVectorStore({int? expectedDimension, int? maxEntries})
+    : _expectedDimension = expectedDimension,
+      _maxEntries = maxEntries {
     final ctx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'constructor',
       params: {
-        'databasePath': _databasePath,
-        'tableName': _tableName,
         'expectedDimension': _expectedDimension,
+        'maxEntries': _maxEntries,
       },
     );
 
     try {
-      Validation.validateNonEmptyString('tableName', _tableName, context: ctx);
       if (_expectedDimension != null) {
         Validation.validatePositive(
           'expectedDimension',
@@ -41,8 +38,10 @@ class LocalVectorStore implements VectorStore {
           context: ctx,
         );
       }
-      // Log initialization at a fine level so it can be enabled in debug scenarios.
-      _logger.fine('Initialized LocalVectorStore', ctx.toMap());
+      if (_maxEntries != null) {
+        Validation.validatePositive('maxEntries', _maxEntries, context: ctx);
+      }
+      _logger.fine('Initialized InMemoryVectorStore', ctx.toMap());
     } catch (e, st) {
       ChatMemoryLogger.logError(
         _logger,
@@ -55,14 +54,32 @@ class LocalVectorStore implements VectorStore {
     }
   }
 
+  void _maybeEvict() {
+    if (_maxEntries == null) return;
+    while (_entries.length > _maxEntries) {
+      // Evict least recently used
+      final oldestKey = _lru.keys.first;
+      _entries.remove(oldestKey);
+      _lru.remove(oldestKey);
+      _logger.warning('Evicted LRU entry', {
+        'evictedId': oldestKey,
+        'currentSize': _entries.length,
+      });
+    }
+  }
+
+  void _touch(String id) {
+    _lru.remove(id);
+    _lru[id] = DateTime.now();
+  }
+
   @override
   Future<void> store(VectorEntry entry) async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'store',
       params: {'id': entry.id},
     );
-
     try {
       Validation.validateNonEmptyString('entry.id', entry.id, context: opCtx);
       Validation.validateEmbeddingVector(
@@ -72,8 +89,9 @@ class LocalVectorStore implements VectorStore {
         context: opCtx,
       );
 
-      // Basic duplicate handling: update existing entry (acts as upsert).
       _entries[entry.id] = entry;
+      _touch(entry.id);
+      _maybeEvict();
 
       _logger.fine('Stored vector entry', opCtx.toMap());
     } catch (e, st) {
@@ -97,14 +115,12 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<void> storeBatch(List<VectorEntry> entries) async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'storeBatch',
       params: {'count': entries.length},
     );
-
     try {
       Validation.validateListNotEmpty('entries', entries, context: opCtx);
-
       for (final entry in entries) {
         Validation.validateNonEmptyString('entry.id', entry.id, context: opCtx);
         Validation.validateEmbeddingVector(
@@ -114,8 +130,9 @@ class LocalVectorStore implements VectorStore {
           context: opCtx,
         );
         _entries[entry.id] = entry;
+        _touch(entry.id);
       }
-
+      _maybeEvict();
       _logger.fine('Stored batch of vector entries', opCtx.toMap());
     } catch (e, st) {
       ChatMemoryLogger.logError(
@@ -143,7 +160,7 @@ class LocalVectorStore implements VectorStore {
     Map<String, dynamic>? metadataFilter,
   }) async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'search',
       params: {
         'topK': topK,
@@ -151,7 +168,6 @@ class LocalVectorStore implements VectorStore {
         'metadataFilter': metadataFilter,
       },
     );
-
     try {
       Validation.validatePositive('topK', topK, context: opCtx);
       Validation.validateRange(
@@ -176,17 +192,14 @@ class LocalVectorStore implements VectorStore {
       final similarities = <SimilaritySearchResult>[];
 
       for (final entry in _entries.values) {
-        // Apply metadata filter if provided
         if (metadataFilter != null &&
             !_matchesFilter(entry.metadata, metadataFilter)) {
           continue;
         }
 
-        // Validate embedding dimensions for each entry before similarity calc
         if (entry.embedding.length != queryEmbedding.length) {
-          // Do not throw here for a single mismatch; log and skip the entry.
           final mismatchCtx = ErrorContext(
-            component: 'LocalVectorStore',
+            component: 'InMemoryVectorStore',
             operation: 'search.dimensionMismatch',
             params: {
               'entryId': entry.id,
@@ -194,22 +207,16 @@ class LocalVectorStore implements VectorStore {
               'actual': entry.embedding.length,
             },
           );
-          ChatMemoryLogger.logError(
-            _logger,
-            'search.dimensionMismatch',
-            VectorStoreException.dimensionMismatch(
-              expected: queryEmbedding.length,
-              actual: entry.embedding.length,
-              context: mismatchCtx,
-            ),
-            params: mismatchCtx.toMap(),
-            shouldRethrow: false,
+          // Log a warning for dimension mismatch and treat similarity as 0.0
+          // Avoid constructing/throwing exceptions here to preserve graceful degradation.
+          _logger.warning(
+            'Dimension mismatch for entry ${entry.id}: expected=${queryEmbedding.length} actual=${entry.embedding.length}',
+            mismatchCtx.toMap(),
           );
           continue;
         }
 
         final similarity = _cosineSimilarity(queryEmbedding, entry.embedding);
-
         if (similarity >= minSimilarity) {
           similarities.add(
             SimilaritySearchResult(entry: entry, similarity: similarity),
@@ -233,7 +240,6 @@ class LocalVectorStore implements VectorStore {
         params: opCtx.toMap(),
         shouldRethrow: false,
       );
-      // Graceful degradation: return empty results for recoverable vector-store/search issues.
       return <SimilaritySearchResult>[];
     }
   }
@@ -241,13 +247,15 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<VectorEntry?> get(String id) async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'get',
       params: {'id': id},
     );
     try {
       Validation.validateNonEmptyString('id', id, context: opCtx);
-      return _entries[id];
+      final entry = _entries[id];
+      if (entry != null) _touch(id);
+      return entry;
     } catch (e, st) {
       ChatMemoryLogger.logError(
         _logger,
@@ -269,13 +277,14 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<void> delete(String id) async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'delete',
       params: {'id': id},
     );
     try {
       Validation.validateNonEmptyString('id', id, context: opCtx);
       _entries.remove(id);
+      _lru.remove(id);
       _logger.fine('Deleted entry', opCtx.toMap());
     } catch (e, st) {
       ChatMemoryLogger.logError(
@@ -298,7 +307,7 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<void> deleteBatch(List<String> ids) async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'deleteBatch',
       params: {'count': ids.length},
     );
@@ -306,6 +315,7 @@ class LocalVectorStore implements VectorStore {
       Validation.validateListNotEmpty('ids', ids, context: opCtx);
       for (final id in ids) {
         _entries.remove(id);
+        _lru.remove(id);
       }
       _logger.fine('Deleted batch of entries', opCtx.toMap());
     } catch (e, st) {
@@ -329,7 +339,7 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<List<VectorEntry>> getAll() async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'getAll',
     );
     try {
@@ -358,11 +368,12 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<void> clear() async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'clear',
     );
     try {
       _entries.clear();
+      _lru.clear();
       _logger.fine('Cleared all entries', opCtx.toMap());
     } catch (e, st) {
       ChatMemoryLogger.logError(
@@ -385,7 +396,7 @@ class LocalVectorStore implements VectorStore {
   @override
   Future<int> count() async {
     final opCtx = ErrorContext(
-      component: 'LocalVectorStore',
+      component: 'InMemoryVectorStore',
       operation: 'count',
     );
     try {
@@ -410,7 +421,6 @@ class LocalVectorStore implements VectorStore {
     }
   }
 
-  /// Check if entry metadata matches the filter criteria
   bool _matchesFilter(
     Map<String, dynamic> metadata,
     Map<String, dynamic> filter,
@@ -423,7 +433,6 @@ class LocalVectorStore implements VectorStore {
     return true;
   }
 
-  /// Calculate cosine similarity between two vectors
   double _cosineSimilarity(List<double> a, List<double> b) {
     if (a.length != b.length) return 0.0;
 
@@ -435,7 +444,6 @@ class LocalVectorStore implements VectorStore {
       final ai = a[i];
       final bi = b[i];
       if (ai.isNaN || bi.isNaN || ai.isInfinite || bi.isInfinite) {
-        // Invalid values: treat as non-similar
         return 0.0;
       }
       dotProduct += ai * bi;
@@ -447,10 +455,4 @@ class LocalVectorStore implements VectorStore {
 
     return dotProduct / (sqrt(normA) * sqrt(normB));
   }
-
-  /// Get the database path (for compatibility)
-  String get databasePath => _databasePath;
-
-  /// Get the table name (for compatibility)
-  String get tableName => _tableName;
 }

@@ -1,8 +1,6 @@
+import 'package:chat_memory/chat_memory.dart';
 import 'package:test/test.dart';
 import 'package:chat_memory/src/memory/memory_manager.dart';
-import 'package:chat_memory/src/vector_stores/in_memory_vector_store.dart';
-import 'package:chat_memory/src/embeddings/simple_embedding_service.dart';
-import 'package:chat_memory/src/models/message.dart';
 import '../test_utils.dart';
 
 void main() {

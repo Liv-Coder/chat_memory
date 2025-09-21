@@ -1,18 +1,18 @@
-import 'models/message.dart';
-import 'models/prompt_payload.dart';
-import 'persistence/persistence_strategy.dart';
-import 'persistence/in_memory_store.dart';
-import 'utils/token_counter.dart';
+import '../core/models/message.dart';
+import '../core/models/prompt_payload.dart';
+import '../core/persistence/persistence_strategy.dart';
+import '../core/persistence/in_memory_store.dart';
+import '../core/utils/token_counter.dart';
 import 'follow_up/follow_up_generator.dart';
-import 'memory/memory_manager.dart';
-import 'memory/hybrid_memory_factory.dart';
-import 'summarizers/deterministic_summarizer.dart';
-import 'strategies/summarization_strategy.dart';
+import '../memory/memory_manager.dart';
+import '../memory/hybrid_memory_factory.dart';
+import '../memory/summarizers/deterministic_summarizer.dart';
+import '../memory/strategies/summarization_strategy.dart';
 import 'callbacks/callback_manager.dart';
 import 'analytics/conversation_analytics.dart';
-import 'utils/message_operations.dart';
+import '../core/utils/message_operations.dart';
 
-import 'logging/chat_memory_logger.dart';
+import '../core/logging/chat_memory_logger.dart';
 import 'package:logging/logging.dart';
 
 /// Enhanced conversation manager that integrates with the hybrid memory system

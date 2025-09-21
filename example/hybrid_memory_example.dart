@@ -1,6 +1,5 @@
 import 'package:chat_memory/chat_memory.dart';
 import 'dart:developer' as developer;
-import 'package:chat_memory/chat_memory.dart';
 
 /// Comprehensive examples demonstrating the hybrid memory system
 ///
