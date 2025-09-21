@@ -1,5 +1,6 @@
 import 'package:chat_memory/chat_memory.dart';
 import 'dart:developer' as developer;
+import 'package:chat_memory/chat_memory.dart';
 
 /// Comprehensive examples demonstrating the hybrid memory system
 ///
@@ -13,6 +14,7 @@ void main() async {
   await presetConfigurationsExample();
   await advancedBuilderExample();
   await semanticRetrievalExample();
+  await processingPipelineExample();
   await conversationStatsExample();
 
   developer.log('\n=== All Examples Complete ===');
@@ -213,7 +215,118 @@ Future<void> semanticRetrievalExample() async {
   developer.log('');
 }
 
-/// Example 5: Conversation statistics and monitoring
+/// Example 5: Advanced Processing Pipeline
+Future<void> processingPipelineExample() async {
+  developer.log('🏭 Example 5: Advanced Processing Pipeline');
+  developer.log('─' * 40);
+
+  // Create processing components
+  final tokenCounter = HeuristicTokenCounter(charsPerToken: 4);
+  final chunker = MessageChunker(tokenCounter: tokenCounter);
+  final embeddingService = SimpleEmbeddingService(dimensions: 128);
+  final embeddingPipeline = EmbeddingPipeline(
+    embeddingService: embeddingService,
+  );
+
+  // Create a message processor with full pipeline
+  final processor = MessageProcessorFactory.createDevelopment(
+    chunker: chunker,
+    embeddingPipeline: embeddingPipeline,
+  );
+
+  // Create test messages
+  final messages = [
+    Message(
+      id: 'pipeline_msg_1',
+      role: MessageRole.user,
+      content:
+          'What are the benefits of using a sophisticated processing pipeline for handling large-scale text data in AI applications?',
+      timestamp: DateTime.now(),
+    ),
+    Message(
+      id: 'pipeline_msg_2',
+      role: MessageRole.assistant,
+      content:
+          'A sophisticated processing pipeline offers several key advantages: intelligent chunking for better context preservation, resilient embedding generation with circuit breakers and retry logic, configurable processing stages for flexibility, and comprehensive monitoring for optimization.',
+      timestamp: DateTime.now(),
+    ),
+  ];
+
+  // Configure the processing pipeline
+  final pipelineConfig = ProcessingPipelineConfig.fromPreset(
+    ProcessingPreset.development,
+  );
+
+  developer.log('📊 Pipeline Configuration:');
+  developer.log('  Processing mode: ${pipelineConfig.processingConfig.mode}');
+  developer.log(
+    '  Chunking strategy: ${pipelineConfig.chunkingConfig.strategy}',
+  );
+  developer.log(
+    '  Max chunk tokens: ${pipelineConfig.chunkingConfig.maxChunkTokens}',
+  );
+  developer.log(
+    '  Embedding batch size: ${pipelineConfig.embeddingConfig.maxBatchSize}',
+  );
+
+  // Process messages through the pipeline
+  developer.log('\n🚀 Processing messages through pipeline...');
+  final stopwatch = Stopwatch()..start();
+
+  final result = await processor.processMessages(
+    messages,
+    pipelineConfig.processingConfig,
+  );
+
+  stopwatch.stop();
+
+  // Display results
+  developer.log('\n✅ Pipeline Results:');
+  developer.log('  Processed messages: ${result.processedMessages.length}');
+  developer.log('  Created chunks: ${result.chunks.length}');
+  developer.log(
+    '  Generated embeddings: ${result.embeddingResult?.embeddings.length ?? 0}',
+  );
+  developer.log('  Processing errors: ${result.errors.length}');
+  developer.log(
+    '  Success rate: ${(result.stats.successRate * 100).toStringAsFixed(1)}%',
+  );
+  developer.log('  Processing time: ${stopwatch.elapsedMilliseconds}ms');
+
+  // Show chunk details
+  if (result.chunks.isNotEmpty) {
+    developer.log('\n📄 Sample chunks:');
+    for (int i = 0; i < result.chunks.length && i < 3; i++) {
+      final chunk = result.chunks[i];
+      developer.log('  Chunk ${i + 1}: "${chunk.content.substring(0, 50)}..."');
+      developer.log(
+        '    Tokens: ${chunk.estimatedTokens}, Parent: ${chunk.parentMessageId}',
+      );
+    }
+  }
+
+  // Show embedding quality
+  if (result.embeddingResult?.embeddings.isNotEmpty == true) {
+    final embedding = result.embeddingResult!.embeddings.first;
+    developer.log('\n⚡ Embedding Quality:');
+    developer.log('  Dimensions: ${embedding.embedding.length}');
+    developer.log(
+      '  Quality score: ${embedding.qualityScore.toStringAsFixed(3)}',
+    );
+    developer.log('  Processing time: ${embedding.processingTimeMs}ms');
+  }
+
+  // Show component health
+  final health = processor.getHealthStatus();
+  developer.log('\n🔍 Component Health:');
+  health.forEach((component, status) {
+    developer.log('  $component: $status');
+  });
+
+  developer.log('');
+}
+
+/// Example 6: Conversation statistics and monitoring
 Future<void> conversationStatsExample() async {
   developer.log('📊 Example 5: Conversation Statistics');
   developer.log('─' * 40);

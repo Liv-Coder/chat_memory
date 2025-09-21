@@ -64,11 +64,19 @@ export 'persistence/in_memory_store.dart';
 // -------------------------
 // Semantic components
 // -------------------------
-export 'embeddings/embedding_service.dart';
+export 'embeddings/embedding_service.dart' hide EmbeddingConfig;
 export 'embeddings/simple_embedding_service.dart';
 export 'vector_stores/vector_store.dart';
 export 'vector_stores/local_vector_store.dart';
 export 'vector_stores/in_memory_vector_store.dart';
+
+// -------------------------
+// Advanced Processing Pipeline
+// -------------------------
+export 'processing/message_chunker.dart';
+export 'processing/embedding_pipeline.dart';
+export 'processing/message_processor.dart';
+export 'processing/processing_config.dart';
 
 // -------------------------
 // Misc utilities
