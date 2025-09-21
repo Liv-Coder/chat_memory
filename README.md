@@ -12,11 +12,17 @@ A powerful Dart package that provides **intelligent memory management** for conv
 
 ## Screenshot's
 
-<p align="center">
-  <a href="screenshots/screenshot_1.jpg"><img src="screenshots/screenshot_1.jpg" alt="screenshot 1" width="280" style="margin:8px;"/></a>
-  <a href="screenshots/screenshot_2.jpg"><img src="screenshots/screenshot_2.jpg" alt="screenshot 2" width="280" style="margin:8px;"/></a>
-  <a href="screenshots/screenshot_3.jpg"><img src="screenshots/screenshot_3.jpg" alt="screenshot 3" width="280" style="margin:8px;"/></a>
-</p>
+<div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center; align-items:flex-start;">
+  <a href="screenshots/screenshot_1.jpg" style="flex:0 1 280px; max-width:280px; display:block;">
+    <img src="screenshots/screenshot_1.jpg" alt="screenshot 1" style="width:100%; height:auto; border-radius:6px;" />
+  </a>
+  <a href="screenshots/screenshot_2.jpg" style="flex:0 1 280px; max-width:280px; display:block;">
+    <img src="screenshots/screenshot_2.jpg" alt="screenshot 2" style="width:100%; height:auto; border-radius:6px;" />
+  </a>
+  <a href="screenshots/screenshot_3.jpg" style="flex:0 1 280px; max-width:280px; display:block;">
+    <img src="screenshots/screenshot_3.jpg" alt="screenshot 3" style="width:100%; height:auto; border-radius:6px;" />
+  </a>
+</div>
 
 ## 🚀 Quick Start
 
