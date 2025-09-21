@@ -9,6 +9,9 @@ import '../vector_stores/vector_store.dart';
 import '../embeddings/embedding_service.dart';
 import '../errors.dart';
 import '../logging/chat_memory_logger.dart';
+import 'session_store.dart';
+import 'memory_summarizer.dart';
+import 'semantic_retriever.dart';
 
 /// Configuration for the MemoryManager
 class MemoryConfig {
@@ -66,13 +69,13 @@ class MemoryContextResult {
   });
 }
 
-/// Main orchestrator for hybrid memory management
+/// Lightweight facade that orchestrates specialized memory components
 ///
-/// Implements the enhanced summarization flow with:
-/// 1. Pre-checks for token budget compliance
-/// 2. Summarization layer (compression memory)
-/// 3. Embedding layer (semantic memory)
-/// 4. Final prompt construction
+/// This refactored MemoryManager delegates operations to focused components:
+/// - SessionStore: Message persistence and vector storage
+/// - MemorySummarizer: Summarization logic and strategy application
+/// - SemanticRetriever: Vector search and semantic retrieval
+/// - MemoryCleaner: Cleanup operations and memory optimization
 class MemoryManager {
   final MemoryConfig config;
   final ContextStrategy contextStrategy;
@@ -80,11 +83,12 @@ class MemoryManager {
   final VectorStore? vectorStore;
   final EmbeddingService? embeddingService;
 
-  final Logger _logger = ChatMemoryLogger.loggerFor('memory_manager');
+  // Specialized components
+  final SessionStore _sessionStore;
+  final MemorySummarizer _memorySummarizer;
+  final SemanticRetriever _semanticRetriever;
 
-  // Simple circuit-breaker counters for semantic failures (per instance).
-  int _semanticFailureCount = 0;
-  DateTime? _lastSemanticFailure;
+  final Logger _logger = ChatMemoryLogger.loggerFor('memory_manager');
 
   MemoryManager({
     required this.contextStrategy,
@@ -92,7 +96,21 @@ class MemoryManager {
     this.config = const MemoryConfig(),
     this.vectorStore,
     this.embeddingService,
-  }) {
+  }) : _sessionStore = SessionStore(
+         vectorStore: vectorStore,
+         embeddingService: embeddingService,
+         config: config,
+       ),
+       _memorySummarizer = MemorySummarizer(
+         contextStrategy: contextStrategy,
+         tokenCounter: tokenCounter,
+         config: config,
+       ),
+       _semanticRetriever = SemanticRetriever(
+         vectorStore: vectorStore,
+         embeddingService: embeddingService,
+         config: config,
+       ) {
     // Validate configuration early and fail fast with descriptive errors.
     final ctx = ErrorContext(
       component: 'MemoryManager',
@@ -142,10 +160,10 @@ class MemoryManager {
 
   /// Main entry point: Get context from messages and user query
   ///
-  /// This implements the hybrid memory flow described in the design:
+  /// This implements the hybrid memory flow using specialized components:
   /// 1. Pre-checks for token compliance
-  /// 2. Apply summarization strategy if needed
-  /// 3. Perform semantic retrieval if enabled
+  /// 2. Apply summarization strategy via MemorySummarizer
+  /// 3. Perform semantic retrieval via SemanticRetriever
   /// 4. Construct final prompt with all memory layers
   Future<MemoryContextResult> getContext(
     List<Message> messages,
@@ -178,21 +196,15 @@ class MemoryManager {
         return preCheckResult;
       }
 
-      // Step 2: Apply context strategy (summarization layer)
-      final strategyResult = await contextStrategy.apply(
+      // Step 2: Apply summarization strategy via MemorySummarizer
+      final strategyResult = await _memorySummarizer.applySummarization(
         messages: messages,
         tokenBudget: config.maxTokens,
-        tokenCounter: tokenCounter,
       );
 
-      // Step 3: Semantic retrieval (if enabled)
-      final semanticMessages = config.enableSemanticMemory
-          ? await _performSemanticRetrieval(
-              userQuery,
-              messages,
-              correlationId: correlationId,
-            )
-          : <Message>[];
+      // Step 3: Semantic retrieval via SemanticRetriever
+      final semanticMessages = await _semanticRetriever
+          .retrieveSemanticMessages(query: userQuery, recentMessages: messages);
 
       // Step 4: Construct final prompt
       final finalMessages = await _constructFinalPrompt(
@@ -265,162 +277,14 @@ class MemoryManager {
     }
   }
 
-  /// Store a message in the vector store for semantic retrieval
+  /// Store a message via SessionStore
   Future<void> storeMessage(Message message) async {
-    if (!config.enableSemanticMemory ||
-        vectorStore == null ||
-        embeddingService == null) {
-      return;
-    }
-
-    // Skip system and summary messages from semantic storage
-    if (message.role == MessageRole.system ||
-        message.role == MessageRole.summary) {
-      return;
-    }
-
-    final opCtx = ErrorContext(
-      component: 'MemoryManager',
-      operation: 'storeMessage',
-      params: {'messageId': message.id},
-    );
-    final logger = _logger;
-    const maxRetries = 2;
-    int attempt = 0;
-    while (true) {
-      attempt++;
-      try {
-        final embedding = await embeddingService!.embed(message.content);
-        Validation.validateEmbeddingVector(
-          'embedding',
-          embedding,
-          context: opCtx,
-        );
-        final vectorEntry = message.toVectorEntry(embedding);
-        await vectorStore!.store(vectorEntry);
-        logger.fine('Stored message=${message.id} in vector store');
-        return;
-      } catch (e, st) {
-        // If embedding specifically failed, log and disable semantic for this operation
-        if (e is EmbeddingException) {
-          ChatMemoryLogger.logError<void>(
-            logger,
-            'storeMessage.embed',
-            e,
-            stackTrace: st,
-            params: opCtx.toMap(),
-          );
-          return;
-        }
-
-        // On other errors, retry a small number of times for transient issues.
-        ChatMemoryLogger.logError<void>(
-          logger,
-          'storeMessage.attempt',
-          e,
-          stackTrace: st,
-          params: {'attempt': attempt, ...opCtx.toMap()},
-        );
-        if (attempt > maxRetries) {
-          // escalate as VectorStoreException after retries
-          final vsEx = VectorStoreException.storageFailure(
-            'Failed to store message ${message.id} after $attempt attempts',
-            cause: e,
-            stackTrace: st,
-            context: opCtx,
-          );
-          ChatMemoryLogger.logError<void>(
-            logger,
-            'storeMessage.failure',
-            vsEx,
-            stackTrace: st,
-            params: opCtx.toMap(),
-            shouldRethrow: false,
-          );
-          // Throw to allow upstream to decide if this is fatal.
-          throw vsEx;
-        }
-        // small backoff
-        await Future.delayed(Duration(milliseconds: 100 * attempt));
-      }
-    }
+    await _sessionStore.storeMessage(message);
   }
 
-  /// Store multiple messages in batch
+  /// Store multiple messages via SessionStore
   Future<void> storeMessageBatch(List<Message> messages) async {
-    if (!config.enableSemanticMemory ||
-        vectorStore == null ||
-        embeddingService == null) {
-      return;
-    }
-
-    final toStore = messages
-        .where(
-          (m) => m.role != MessageRole.system && m.role != MessageRole.summary,
-        )
-        .toList();
-    if (toStore.isEmpty) return;
-
-    final opCtx = ErrorContext(
-      component: 'MemoryManager',
-      operation: 'storeMessageBatch',
-      params: {'count': toStore.length},
-    );
-    final logger = _logger;
-
-    try {
-      // Validate inputs
-      Validation.validateListNotEmpty('messages', toStore, context: opCtx);
-
-      // Get embeddings for all messages (with basic retry for embedding service)
-      final texts = toStore.map((m) => m.content).toList();
-      List<List<double>> embeddings;
-      try {
-        embeddings = await embeddingService!.embedBatch(texts);
-      } catch (e, st) {
-        ChatMemoryLogger.logError<void>(
-          logger,
-          'storeMessageBatch.embedBatch',
-          e,
-          stackTrace: st,
-          params: opCtx.toMap(),
-        );
-        // Fail fast for embedding failures since we cannot create vector entries
-        // Use the embedding service's EmbeddingException signature (message, [cause])
-        throw EmbeddingException('Batch embedding failed', e);
-      }
-
-      // Create vector entries
-      final vectorEntries = <VectorEntry>[];
-      for (int i = 0; i < toStore.length; i++) {
-        Validation.validateEmbeddingVector(
-          'embedding[$i]',
-          embeddings[i],
-          context: opCtx,
-        );
-        vectorEntries.add(toStore[i].toVectorEntry(embeddings[i]));
-      }
-
-      await vectorStore!.storeBatch(vectorEntries);
-      logger.fine(
-        'Stored batch of ${vectorEntries.length} entries in vector store',
-      );
-    } catch (e, st) {
-      // Log and rethrow a VectorStoreException to make failure explicit to callers.
-      ChatMemoryLogger.logError<void>(
-        logger,
-        'storeMessageBatch',
-        e,
-        stackTrace: st,
-        params: opCtx.toMap(),
-      );
-      throw VectorStoreException.storageFailure(
-        'Batch storage failed',
-        cause: e,
-        stackTrace: st,
-        context: opCtx,
-      );
-    }
+    await _sessionStore.storeMessageBatch(messages);
   }
 
   /// Step 1: Pre-checks - return early if within token budget
@@ -447,102 +311,6 @@ class MemoryManager {
     }
 
     return null; // Continue with full processing
-  }
-
-  /// Step 3: Semantic retrieval from vector store
-  Future<List<Message>> _performSemanticRetrieval(
-    String userQuery,
-    List<Message> messages, {
-    String? correlationId,
-  }) async {
-    final opCtx = ErrorContext(
-      component: 'MemoryManager',
-      operation: '_performSemanticRetrieval',
-      params: {'correlationId': correlationId},
-    );
-    final logger = _logger;
-
-    if (vectorStore == null || embeddingService == null) {
-      logger.fine('Semantic retrieval disabled or not configured', {
-        'correlationId': correlationId,
-      });
-      return [];
-    }
-
-    // Simple circuit breaker: if repeated failures occurred recently, skip semantic retrieval for a while.
-    if (_semanticFailureCount >= 3 && _lastSemanticFailure != null) {
-      final since = DateTime.now().difference(_lastSemanticFailure!);
-      if (since.inMinutes < 5) {
-        logger.warning(
-          'Semantic retrieval circuit open - skipping semantic ops',
-          {'correlationId': correlationId},
-        );
-        return [];
-      } else {
-        // reset after cooldown
-        _semanticFailureCount = 0;
-      }
-    }
-
-    try {
-      // Get embedding for user query
-      final queryEmbedding = await embeddingService!.embed(userQuery);
-      Validation.validateEmbeddingVector(
-        'queryEmbedding',
-        queryEmbedding,
-        context: opCtx,
-      );
-
-      // Search for similar messages
-      final searchResults = await vectorStore!.search(
-        queryEmbedding: queryEmbedding,
-        topK: config.semanticTopK,
-        minSimilarity: config.minSimilarity,
-      );
-
-      // Convert results back to messages and filter out recent ones
-      final recentMessageIds = messages.take(10).map((m) => m.id).toSet();
-
-      final semanticMessages = <Message>[];
-      for (final result in searchResults) {
-        // Skip if this message is already in recent messages
-        if (recentMessageIds.contains(result.entry.id)) continue;
-
-        // Convert vector entry back to message
-        final message = Message(
-          id: result.entry.id,
-          role: _parseRole(result.entry.metadata['role'] as String?),
-          content: result.entry.content,
-          timestamp: result.entry.timestamp,
-          metadata: {
-            ...result.entry.metadata,
-            'similarity': result.similarity,
-            'retrievalType': 'semantic',
-          },
-        );
-
-        semanticMessages.add(message);
-      }
-
-      // Reset failure counter on success
-      _semanticFailureCount = 0;
-      _lastSemanticFailure = null;
-
-      return semanticMessages;
-    } catch (e, st) {
-      // Increment failure counter and record time to enable circuit-breaker fallback
-      _semanticFailureCount++;
-      _lastSemanticFailure = DateTime.now();
-      ChatMemoryLogger.logError<void>(
-        logger,
-        '_performSemanticRetrieval',
-        e,
-        stackTrace: st,
-        params: opCtx.toMap(),
-      );
-      // Graceful degradation: return empty list so caller can continue without semantic augmentation.
-      return [];
-    }
   }
 
   /// Step 4: Construct final prompt combining all memory layers
@@ -605,23 +373,6 @@ class MemoryManager {
   int _calculateTokens(List<Message> messages) {
     final text = messages.map((m) => m.content).join('\n');
     return tokenCounter.estimateTokens(text);
-  }
-
-  /// Parse role string back to MessageRole enum
-  MessageRole _parseRole(String? roleStr) {
-    if (roleStr == null) return MessageRole.user;
-
-    switch (roleStr.toLowerCase()) {
-      case 'system':
-        return MessageRole.system;
-      case 'assistant':
-        return MessageRole.assistant;
-      case 'summary':
-        return MessageRole.summary;
-      case 'user':
-      default:
-        return MessageRole.user;
-    }
   }
 }
 

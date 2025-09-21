@@ -37,6 +37,9 @@ export 'enhanced_conversation_manager.dart';
 // -------------------------
 export 'memory/memory_manager.dart';
 export 'memory/hybrid_memory_factory.dart';
+export 'memory/session_store.dart';
+export 'memory/memory_summarizer.dart';
+export 'memory/semantic_retriever.dart';
 
 // -------------------------
 // Strategies & Summarizers
