@@ -25,12 +25,16 @@ export 'models/prompt_payload.dart';
 // Token utilities
 // -------------------------
 export 'utils/token_counter.dart';
+export 'utils/message_operations.dart';
+export 'utils/token_calculations.dart';
 
 // -------------------------
 // Conversation management
 // -------------------------
 export 'conversation_manager.dart';
 export 'enhanced_conversation_manager.dart';
+export 'callbacks/callback_manager.dart';
+export 'analytics/conversation_analytics.dart';
 
 // -------------------------
 // Memory orchestration

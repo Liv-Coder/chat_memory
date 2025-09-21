@@ -8,6 +8,9 @@ import 'memory/memory_manager.dart';
 import 'memory/hybrid_memory_factory.dart';
 import 'summarizers/deterministic_summarizer.dart';
 import 'strategies/summarization_strategy.dart';
+import 'callbacks/callback_manager.dart';
+import 'analytics/conversation_analytics.dart';
+import 'utils/message_operations.dart';
 
 import 'logging/chat_memory_logger.dart';
 import 'package:logging/logging.dart';
@@ -16,24 +19,21 @@ import 'package:logging/logging.dart';
 ///
 /// This manager provides the same interface as the original ConversationManager
 /// but uses the new MemoryManager internally for better context management.
+/// It delegates specialized operations to focused components for improved
+/// maintainability and testability.
 class EnhancedConversationManager {
   final PersistenceStrategy _persistence;
   final MemoryManager _memoryManager;
-  final TokenCounter _tokenCounter;
   FollowUpGenerator? _followUpGenerator;
-  final void Function(Message)? _onSummaryCreated;
-  final void Function(Message)? _onMessageStored;
+
+  // Specialized components
+  final CallbackManager _callbackManager;
+  final ConversationAnalytics _analytics;
 
   // Logger for manager-level events and errors
   final Logger _logger = ChatMemoryLogger.loggerFor(
     'enhanced_conversation_manager',
   );
-
-  // Callback failure tracking to allow disabling misbehaving callbacks.
-  int _onMessageStoredFailureCount = 0;
-  bool _disableOnMessageStoredCallback = false;
-  int _onSummaryCreatedFailureCount = 0;
-  bool _disableOnSummaryCreatedCallback = false;
 
   EnhancedConversationManager({
     PersistenceStrategy? persistence,
@@ -43,10 +43,14 @@ class EnhancedConversationManager {
     void Function(Message)? onSummaryCreated,
     void Function(Message)? onMessageStored,
   }) : _persistence = persistence ?? InMemoryStore(),
-       _tokenCounter = tokenCounter ?? HeuristicTokenCounter(),
        _followUpGenerator = followUpGenerator,
-       _onSummaryCreated = onSummaryCreated,
-       _onMessageStored = onMessageStored,
+       _callbackManager = CallbackManager(
+         onMessageStored: onMessageStored,
+         onSummaryCreated: onSummaryCreated,
+       ),
+       _analytics = ConversationAnalytics(
+         tokenCounter: tokenCounter ?? HeuristicTokenCounter(),
+       ),
        // If a MemoryManager wasn't provided, construct a safe default without
        // semantic memory enabled to avoid requiring vector stores at construction time.
        _memoryManager =
@@ -113,27 +117,8 @@ class EnhancedConversationManager {
       // continue; do not fail the append operation
     }
 
-    // Trigger callback with failure tracking
-    if (_onMessageStored != null && !_disableOnMessageStoredCallback) {
-      try {
-        _onMessageStored(message);
-      } catch (e, st) {
-        ChatMemoryLogger.logError<void>(
-          _logger,
-          'callback.onMessageStored',
-          e,
-          stackTrace: st,
-          params: {'messageId': message.id},
-        );
-        _onMessageStoredFailureCount++;
-        if (_onMessageStoredFailureCount >= 3) {
-          _disableOnMessageStoredCallback = true;
-          _logger.warning(
-            'Disabling onMessageStored callback after repeated failures',
-          );
-        }
-      }
-    }
+    // Trigger callback via CallbackManager
+    await _callbackManager.executeMessageStoredCallback(message);
   }
 
   /// Add a user message to the conversation
@@ -141,11 +126,8 @@ class EnhancedConversationManager {
     String content, {
     Map<String, dynamic>? metadata,
   }) async {
-    final message = Message(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      role: MessageRole.user,
+    final message = MessageOperations.createUserMessage(
       content: content,
-      timestamp: DateTime.now().toUtc(),
       metadata: metadata,
     );
     await appendMessage(message);
@@ -156,11 +138,8 @@ class EnhancedConversationManager {
     String content, {
     Map<String, dynamic>? metadata,
   }) async {
-    final message = Message(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      role: MessageRole.assistant,
+    final message = MessageOperations.createAssistantMessage(
       content: content,
-      timestamp: DateTime.now().toUtc(),
       metadata: metadata,
     );
     await appendMessage(message);
@@ -171,11 +150,8 @@ class EnhancedConversationManager {
     String content, {
     Map<String, dynamic>? metadata,
   }) async {
-    final message = Message(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      role: MessageRole.system,
+    final message = MessageOperations.createSystemMessage(
       content: content,
-      timestamp: DateTime.now().toUtc(),
       metadata: metadata,
     );
     await appendMessage(message);
@@ -222,8 +198,8 @@ class EnhancedConversationManager {
       strategyUsed: contextResult.metadata['strategyUsed'] ?? 'MemoryManager',
     );
 
-    // Trigger summary callback if summary was created
-    if (contextResult.summary != null && _onSummaryCreated != null) {
+    // Trigger summary callback via CallbackManager if summary was created
+    if (contextResult.summary != null) {
       final summaryMessage = Message(
         id: 'summary_${DateTime.now().microsecondsSinceEpoch}',
         role: MessageRole.summary,
@@ -231,26 +207,7 @@ class EnhancedConversationManager {
         timestamp: DateTime.now().toUtc(),
         metadata: contextResult.metadata,
       );
-      if (!_disableOnSummaryCreatedCallback) {
-        try {
-          _onSummaryCreated(summaryMessage);
-        } catch (e, st) {
-          ChatMemoryLogger.logError<void>(
-            _logger,
-            'callback.onSummaryCreated',
-            e,
-            stackTrace: st,
-            params: {'summaryId': summaryMessage.id},
-          );
-          _onSummaryCreatedFailureCount++;
-          if (_onSummaryCreatedFailureCount >= 3) {
-            _disableOnSummaryCreatedCallback = true;
-            _logger.warning(
-              'Disabling onSummaryCreated callback after repeated failures',
-            );
-          }
-        }
-      }
+      await _callbackManager.executeSummaryCreatedCallback(summaryMessage);
     }
 
     return PromptPayload(
@@ -322,50 +279,12 @@ class EnhancedConversationManager {
     }
   }
 
-  /// Get conversation statistics
+  /// Get conversation statistics via ConversationAnalytics
   Future<ConversationStats> getStats() async {
     final messages = await _persistence.loadMessages();
-
-    final userMessages = messages.where((m) => m.role == MessageRole.user);
-    final assistantMessages = messages.where(
-      (m) => m.role == MessageRole.assistant,
-    );
-    final systemMessages = messages.where((m) => m.role == MessageRole.system);
-    final summaryMessages = messages.where(
-      (m) => m.role == MessageRole.summary,
-    );
-
-    final totalTokens = _tokenCounter.estimateTokens(
-      messages.map((m) => m.content).join('\n'),
-    );
-
-    // Get vector store stats if available
-    int? vectorCount;
-    final vs = _memoryManager.vectorStore;
-    if (vs != null) {
-      try {
-        vectorCount = await vs.count();
-      } catch (e, st) {
-        ChatMemoryLogger.logError<void>(
-          _logger,
-          'getStats.vectorCount',
-          e,
-          stackTrace: st,
-        );
-        vectorCount = null;
-      }
-    }
-
-    return ConversationStats(
-      totalMessages: messages.length,
-      userMessages: userMessages.length,
-      assistantMessages: assistantMessages.length,
-      systemMessages: systemMessages.length,
-      summaryMessages: summaryMessages.length,
-      totalTokens: totalTokens,
-      vectorCount: vectorCount,
-      oldestMessage: messages.isEmpty ? null : messages.first.timestamp,
-      newestMessage: messages.isEmpty ? null : messages.last.timestamp,
+    return _analytics.calculateStats(
+      messages: messages,
+      memoryManager: _memoryManager,
     );
   }
 
@@ -398,12 +317,7 @@ class EnhancedConversationManager {
 
   /// Find the last user message for query extraction
   Message? _getLastUserMessage(List<Message> messages) {
-    for (int i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role == MessageRole.user) {
-        return messages[i];
-      }
-    }
-    return null;
+    return MessageOperations.getLastUserMessage(messages);
   }
 
   /// Flush any pending operations
@@ -453,67 +367,5 @@ class EnhancedPromptPayload extends PromptPayload {
       'metadata': metadata,
       'query': query,
     };
-  }
-}
-
-/// Statistics about the conversation
-class ConversationStats {
-  final int totalMessages;
-  final int userMessages;
-  final int assistantMessages;
-  final int systemMessages;
-  final int summaryMessages;
-  final int totalTokens;
-  final int? vectorCount;
-  final DateTime? oldestMessage;
-  final DateTime? newestMessage;
-
-  const ConversationStats({
-    required this.totalMessages,
-    required this.userMessages,
-    required this.assistantMessages,
-    required this.systemMessages,
-    required this.summaryMessages,
-    required this.totalTokens,
-    this.vectorCount,
-    this.oldestMessage,
-    this.newestMessage,
-  });
-
-  Duration? get conversationDuration {
-    if (oldestMessage == null || newestMessage == null) return null;
-    return newestMessage!.difference(oldestMessage!);
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'totalMessages': totalMessages,
-      'userMessages': userMessages,
-      'assistantMessages': assistantMessages,
-      'systemMessages': systemMessages,
-      'summaryMessages': summaryMessages,
-      'totalTokens': totalTokens,
-      'vectorCount': vectorCount,
-      'oldestMessage': oldestMessage?.toIso8601String(),
-      'newestMessage': newestMessage?.toIso8601String(),
-      'conversationDurationMinutes': conversationDuration?.inMinutes,
-    };
-  }
-
-  @override
-  String toString() {
-    final buffer = StringBuffer();
-    buffer.writeln('Conversation Statistics:');
-    buffer.writeln('  Total Messages: $totalMessages');
-    buffer.writeln('  User: $userMessages, Assistant: $assistantMessages');
-    buffer.writeln('  System: $systemMessages, Summary: $summaryMessages');
-    buffer.writeln('  Total Tokens: $totalTokens');
-    if (vectorCount != null) {
-      buffer.writeln('  Vectors Stored: $vectorCount');
-    }
-    if (conversationDuration != null) {
-      buffer.writeln('  Duration: ${conversationDuration!.inMinutes} minutes');
-    }
-    return buffer.toString();
   }
 }
