@@ -132,7 +132,7 @@ class ProcessingPipelineConfig {
   factory ProcessingPipelineConfig.fromPreset(ProcessingPreset preset) {
     switch (preset) {
       case ProcessingPreset.development:
-        return ProcessingPipelineConfig(
+        return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.sequential,
             maxConcurrency: 2,
@@ -165,7 +165,7 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.production:
-        return ProcessingPipelineConfig(
+        return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.parallel,
             maxConcurrency: 10,
@@ -203,7 +203,7 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.highThroughput:
-        return ProcessingPipelineConfig(
+        return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.parallel,
             maxConcurrency: 50,
@@ -237,7 +237,7 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.lowLatency:
-        return ProcessingPipelineConfig(
+        return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.sequential,
             maxConcurrency: 1,
@@ -269,7 +269,7 @@ class ProcessingPipelineConfig {
         );
 
       case ProcessingPreset.memoryOptimized:
-        return ProcessingPipelineConfig(
+        return const ProcessingPipelineConfig(
           processingConfig: ProcessingConfig(
             mode: ProcessingMode.sequential,
             maxConcurrency: 2,
@@ -323,7 +323,7 @@ class ProcessingPipelineConfig {
 
   /// Validate the configuration for consistency and compatibility
   void validate() {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'ProcessingPipelineConfig',
       operation: 'validate',
     );

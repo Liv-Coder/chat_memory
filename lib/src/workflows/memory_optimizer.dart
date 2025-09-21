@@ -302,7 +302,7 @@ class MemoryOptimizer {
   /// Perform automatic optimization with intelligent cleanup and archiving
   Future<OptimizationResult> optimize() async {
     if (_currentOperation != null && !_currentOperation!.isCompleted) {
-      throw ChatMemoryException(
+      throw const ChatMemoryException(
         'Optimization already in progress',
         context: ErrorContext(
           operation: 'optimize',

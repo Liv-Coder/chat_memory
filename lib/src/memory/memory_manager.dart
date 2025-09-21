@@ -290,7 +290,7 @@ class MemoryManager {
   /// Step 1: Pre-checks - return early if within token budget
   Future<MemoryContextResult?> _performPreChecks(List<Message> messages) async {
     if (messages.isEmpty) {
-      return MemoryContextResult(
+      return const MemoryContextResult(
         messages: [],
         estimatedTokens: 0,
         semanticMessages: [],

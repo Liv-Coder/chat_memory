@@ -600,7 +600,7 @@ class MemoryManagerBuilder {
     // Basic compatibility check placeholder: can be extended.
     // If embedding service is known, ensure the vector store can accept the dimension.
     if (_embeddingService != null) {
-      final ctx = ErrorContext(
+      const ctx = ErrorContext(
         component: 'MemoryManagerBuilder',
         operation: 'vectorStoreCompatibilityCheck',
         params: {'hasEmbeddingService': true},

@@ -6,20 +6,59 @@ import '../core/errors.dart';
 import '../core/logging/chat_memory_logger.dart';
 import 'message_chunker.dart';
 
-/// Processing modes for embedding pipeline
-enum ProcessingMode { sequential, parallel, adaptive }
+/// Processing modes for embedding pipeline.
+///
+/// Use these to control how embedding requests are batched and executed.
+enum ProcessingMode {
+  /// Process items one after another.
+  sequential,
 
-/// Circuit breaker states
-enum CircuitBreakerState { closed, open, halfOpen }
+  /// Process items in parallel batches.
+  parallel,
 
-/// Retry strategies for failed operations
-enum RetryStrategy { immediate, linear, exponential, none }
+  /// Adapt batch sizes dynamically based on recent performance.
+  adaptive,
+}
+
+/// Circuit breaker states used to control external call behavior.
+enum CircuitBreakerState {
+  /// Circuit is closed and calls are allowed.
+  closed,
+
+  /// Circuit is open and calls are blocked.
+  open,
+
+  /// Circuit is half-open and limited calls are allowed for probing.
+  halfOpen,
+}
+
+/// Retry strategies for failed operations.
+enum RetryStrategy {
+  /// Retry immediately without delay.
+  immediate,
+
+  /// Retry with a linear backoff.
+  linear,
+
+  /// Retry with exponential backoff.
+  exponential,
+
+  /// Do not retry failed operations.
+  none,
+}
 
 /// Configuration for circuit breaker behavior
 class CircuitBreakerConfig {
+  /// Maximum consecutive failures before opening the circuit.
   final int maxFailures;
+
+  /// Duration the circuit remains open before attempting a half-open probe.
   final Duration timeout;
+
+  /// Number of probe attempts allowed when circuit is half-open.
   final int maxHalfOpenAttempts;
+
+  /// Whether the circuit breaker is enabled.
   final bool enabled;
 
   const CircuitBreakerConfig({
@@ -32,10 +71,19 @@ class CircuitBreakerConfig {
 
 /// Configuration for retry behavior
 class RetryConfig {
+  /// Maximum retry attempts for a failed operation.
   final int maxRetries;
+
+  /// Backoff strategy to use for retries.
   final RetryStrategy strategy;
+
+  /// Base delay used to compute backoff durations.
   final Duration baseDelay;
+
+  /// Maximum delay between retries.
   final Duration maxDelay;
+
+  /// Whether to apply jitter to retry delays.
   final bool useJitter;
 
   const RetryConfig({
@@ -49,17 +97,40 @@ class RetryConfig {
 
 /// Configuration for embedding pipeline behavior
 class EmbeddingConfig {
+  /// How to process embedding requests (sequential/parallel/adaptive).
   final ProcessingMode processingMode;
+
+  /// Maximum number of items per embedding batch.
   final int maxBatchSize;
+
+  /// Minimum batch size when adapting.
   final int minBatchSize;
+
+  /// Maximum allowed requests per second.
   final double maxRequestsPerSecond;
+
+  /// Circuit breaker configuration for external calls.
   final CircuitBreakerConfig circuitBreaker;
+
+  /// Retry configuration for failed operations.
   final RetryConfig retryConfig;
+
+  /// Whether to cache computed embeddings.
   final bool enableCaching;
+
+  /// Maximum number of cached entries.
   final int cacheMaxSize;
+
+  /// Cache TTL (seconds) for cached embeddings.
   final int cacheTtlSeconds;
+
+  /// Whether to run validation on embeddings returned by the service.
   final bool enableValidation;
+
+  /// Minimum acceptable quality score (0.0 to 1.0).
   final double qualityThreshold;
+
+  /// Whether to normalize output vectors to unit length.
   final bool normalize;
 
   const EmbeddingConfig({
@@ -80,9 +151,16 @@ class EmbeddingConfig {
 
 /// Information about a processed embedding
 class EmbeddingInfo {
+  /// Original content string that was embedded.
   final String content;
+
+  /// The embedding vector for the content.
   final List<double> embedding;
+
+  /// Calculated quality score for this embedding (0.0 - 1.0).
   final double qualityScore;
+
+  /// Time in milliseconds spent generating this embedding.
   final int processingTimeMs;
 
   const EmbeddingInfo({
@@ -95,9 +173,16 @@ class EmbeddingInfo {
 
 /// Information about a failed embedding operation
 class EmbeddingFailure {
+  /// Content that failed to produce an embedding.
   final String content;
+
+  /// Error object describing the failure.
   final Object error;
+
+  /// Optional stack trace for the failure.
   final StackTrace? stackTrace;
+
+  /// Number of retry attempts made before failure.
   final int retryAttempts;
 
   const EmbeddingFailure({
@@ -110,13 +195,28 @@ class EmbeddingFailure {
 
 /// Statistics about embedding operations
 class EmbeddingStats {
+  /// Total items processed (including successes and failures).
   final int totalItems;
+
+  /// Number of successful embedding items.
   final int successfulItems;
+
+  /// Number of failed embedding items.
   final int failedItems;
+
+  /// Total processing time in milliseconds for recent samples.
   final int totalTimeMs;
+
+  /// Average time spent per item (ms).
   final double averageTimePerItem;
+
+  /// Peak batch size observed.
   final int peakBatchSize;
+
+  /// Total number of retries performed.
   final int totalRetries;
+
+  /// Cache hit rate observed (0.0 - 1.0).
   final double cacheHitRate;
 
   const EmbeddingStats({
@@ -133,9 +233,16 @@ class EmbeddingStats {
 
 /// Result of embedding pipeline processing
 class EmbeddingResult {
+  /// Successful embeddings produced.
   final List<EmbeddingInfo> embeddings;
+
+  /// Failures encountered while embedding.
   final List<EmbeddingFailure> failures;
+
+  /// Aggregate statistics about embedding processing.
   final EmbeddingStats stats;
+
+  /// Additional metadata about the run.
   final Map<String, dynamic> metadata;
 
   const EmbeddingResult({
@@ -389,7 +496,7 @@ class EmbeddingPipeline {
         failures.add(
           EmbeddingFailure(
             content: content,
-            error: MemoryException('Circuit breaker is open'),
+            error: const MemoryException('Circuit breaker is open'),
             retryAttempts: 0,
           ),
         );
@@ -417,7 +524,7 @@ class EmbeddingPipeline {
           failures.add(
             EmbeddingFailure(
               content: content,
-              error: MemoryException('Circuit breaker is open'),
+              error: const MemoryException('Circuit breaker is open'),
               retryAttempts: 0,
             ),
           );
@@ -449,7 +556,7 @@ class EmbeddingPipeline {
           failures.add(
             EmbeddingFailure(
               content: content,
-              error: MemoryException('Circuit breaker is open'),
+              error: const MemoryException('Circuit breaker is open'),
               retryAttempts: 0,
             ),
           );
@@ -499,7 +606,7 @@ class EmbeddingPipeline {
         final qualityScore = _calculateQualityScore(embedding);
 
         if (qualityScore < config.qualityThreshold) {
-          throw MemoryException('Quality score below threshold');
+          throw const MemoryException('Quality score below threshold');
         }
 
         final embeddingInfo = EmbeddingInfo(
@@ -585,7 +692,7 @@ class EmbeddingPipeline {
             final qualityScore = _calculateQualityScore(embedding);
 
             if (qualityScore < config.qualityThreshold) {
-              throw MemoryException('Quality score below threshold');
+              throw const MemoryException('Quality score below threshold');
             }
 
             final embeddingInfo = EmbeddingInfo(
@@ -632,7 +739,7 @@ class EmbeddingPipeline {
       failures.add(
         EmbeddingFailure(
           content: content,
-          error: MemoryException('Batch processing failed'),
+          error: const MemoryException('Batch processing failed'),
           stackTrace: null,
           retryAttempts: retryCount,
         ),

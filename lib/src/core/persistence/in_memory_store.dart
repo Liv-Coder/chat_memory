@@ -56,7 +56,7 @@ class InMemoryStore implements PersistenceStrategy {
   /// Load all messages (immutable view).
   @override
   Future<List<Message>> loadMessages() async {
-    final ctx = ErrorContext(
+    const ctx = ErrorContext(
       component: 'InMemoryStore',
       operation: 'loadMessages',
     );
@@ -102,7 +102,7 @@ class InMemoryStore implements PersistenceStrategy {
   /// Clear all messages.
   @override
   Future<void> clear() async {
-    final ctx = ErrorContext(component: 'InMemoryStore', operation: 'clear');
+    const ctx = ErrorContext(component: 'InMemoryStore', operation: 'clear');
     try {
       final before = _messages.length;
       _messages.clear();

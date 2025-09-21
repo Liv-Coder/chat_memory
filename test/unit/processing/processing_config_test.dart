@@ -147,8 +147,8 @@ void main() {
       const originalConfig = ProcessingPipelineConfig();
 
       final modifiedConfig = originalConfig.copyWith(
-        processingConfig: ProcessingConfig(maxConcurrency: 20),
-        chunkingConfig: ChunkingConfig(maxChunkTokens: 1000),
+        processingConfig: const ProcessingConfig(maxConcurrency: 20),
+        chunkingConfig: const ChunkingConfig(maxChunkTokens: 1000),
       );
 
       expect(modifiedConfig.processingConfig.maxConcurrency, equals(20));

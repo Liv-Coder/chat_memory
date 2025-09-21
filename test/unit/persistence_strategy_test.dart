@@ -16,7 +16,7 @@ void main() {
           id: '2',
           role: MessageRole.user,
           content: 'b',
-          timestamp: DateTime.utc(2025).add(Duration(seconds: 1)),
+          timestamp: DateTime.utc(2025).add(const Duration(seconds: 1)),
         ),
       ];
 

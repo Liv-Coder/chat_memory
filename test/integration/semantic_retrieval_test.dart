@@ -63,7 +63,7 @@ void main() {
       final vectorStore = InMemoryVectorStore();
       final embedding = SimpleEmbeddingService(dimensions: 16);
 
-      final cfg = MemoryConfig(
+      const cfg = MemoryConfig(
         maxTokens: 50,
         semanticTopK: 2,
         minSimilarity: 0.05,

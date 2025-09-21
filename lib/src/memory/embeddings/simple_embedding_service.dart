@@ -76,7 +76,7 @@ class SimpleEmbeddingService implements EmbeddingService {
 
       // Validate produced embedding
       if (normalized.any((v) => v.isNaN || v.isInfinite)) {
-        throw EmbeddingException(
+        throw const EmbeddingException(
           'Generated embedding contains NaN or infinite values',
         );
       }

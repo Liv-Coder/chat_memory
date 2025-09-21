@@ -186,7 +186,7 @@ class InMemoryVectorStore implements VectorStore {
 
       if (_entries.isEmpty) {
         _logger.fine('Search requested but store is empty', opCtx.toMap());
-        return <SimilaritySearchResult>[];
+        return const <SimilaritySearchResult>[];
       }
 
       final similarities = <SimilaritySearchResult>[];
@@ -240,7 +240,7 @@ class InMemoryVectorStore implements VectorStore {
         params: opCtx.toMap(),
         shouldRethrow: false,
       );
-      return <SimilaritySearchResult>[];
+      return const <SimilaritySearchResult>[];
     }
   }
 
@@ -338,7 +338,7 @@ class InMemoryVectorStore implements VectorStore {
 
   @override
   Future<List<VectorEntry>> getAll() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'InMemoryVectorStore',
       operation: 'getAll',
     );
@@ -367,7 +367,7 @@ class InMemoryVectorStore implements VectorStore {
 
   @override
   Future<void> clear() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'InMemoryVectorStore',
       operation: 'clear',
     );
@@ -395,7 +395,7 @@ class InMemoryVectorStore implements VectorStore {
 
   @override
   Future<int> count() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'InMemoryVectorStore',
       operation: 'count',
     );

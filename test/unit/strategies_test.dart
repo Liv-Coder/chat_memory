@@ -7,7 +7,7 @@ void main() {
   group('SummarizationStrategy', () {
     test('no messages returns empty result', () async {
       final strat = SummarizationStrategy(
-        config: SummarizationStrategyConfig(maxTokens: 100),
+        config: const SummarizationStrategyConfig(maxTokens: 100),
         summarizer: DeterministicSummarizer(maxChars: 50),
         tokenCounter: FakeTokenCounter(),
       );
@@ -26,7 +26,7 @@ void main() {
       final counter = FakeTokenCounter(charsPerToken: 4);
       final messages = TestMessageFactory.createTestMessages(20);
       final strat = SummarizationStrategy(
-        config: SummarizationStrategyConfig(
+        config: const SummarizationStrategyConfig(
           maxTokens: 10,
           minRecentMessages: 3,
           maxSummaryChunkSize: 5,

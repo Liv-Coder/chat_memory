@@ -28,7 +28,7 @@ class DomainSpecificGenerator implements FollowUpGenerator {
 
   // Built-in domain templates
   static final _builtInTemplates = <DomainTemplate>[
-    DomainTemplate(
+    const DomainTemplate(
       domain: 'education',
       keywords: ['learn', 'study', 'understand', 'explain', 'teach'],
       stageTemplates: {
@@ -51,7 +51,7 @@ class DomainSpecificGenerator implements FollowUpGenerator {
       },
     ),
 
-    DomainTemplate(
+    const DomainTemplate(
       domain: 'technical',
       keywords: ['error', 'bug', 'fix', 'troubleshoot', 'code'],
       stageTemplates: {
@@ -74,7 +74,7 @@ class DomainSpecificGenerator implements FollowUpGenerator {
       },
     ),
 
-    DomainTemplate(
+    const DomainTemplate(
       domain: 'business',
       keywords: ['strategy', 'plan', 'market', 'revenue', 'business'],
       stageTemplates: {

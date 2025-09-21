@@ -146,7 +146,7 @@ class MessageOperations {
 
       // Validate timestamp is not in the future (with small tolerance)
       final now = DateTime.now().toUtc();
-      if (message.timestamp.isAfter(now.add(Duration(minutes: 5)))) {
+      if (message.timestamp.isAfter(now.add(const Duration(minutes: 5)))) {
         throw ConfigurationException.invalid(
           'message.timestamp',
           'cannot be significantly in the future',

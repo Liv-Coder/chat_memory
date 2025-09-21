@@ -296,7 +296,7 @@ class ChatMemory {
   ///
   /// Throws [MemoryException] if clearing fails.
   Future<void> clear() async {
-    final ctx = ErrorContext(component: 'ChatMemory', operation: 'clear');
+    const ctx = ErrorContext(component: 'ChatMemory', operation: 'clear');
 
     try {
       await _conversationManager.clear();
@@ -320,7 +320,7 @@ class ChatMemory {
   /// Returns information about the current conversation including message
   /// counts, token estimates, and memory usage.
   Future<Map<String, dynamic>> getStats() async {
-    final ctx = ErrorContext(component: 'ChatMemory', operation: 'getStats');
+    const ctx = ErrorContext(component: 'ChatMemory', operation: 'getStats');
 
     try {
       final messages = await _conversationManager.persistence.loadMessages();
@@ -413,7 +413,7 @@ class ChatMemory {
   /// Returns the system prompt text if available, null if no system
   /// prompt is configured or system prompts are disabled.
   Future<String?> getSystemPrompt() async {
-    final ctx = ErrorContext(
+    const ctx = ErrorContext(
       component: 'ChatMemory',
       operation: 'getSystemPrompt',
     );
@@ -471,7 +471,7 @@ class ChatMemory {
       return;
     }
 
-    final ctx = ErrorContext(
+    const ctx = ErrorContext(
       component: 'ChatMemory',
       operation: '_injectSystemPromptIfNeeded',
     );

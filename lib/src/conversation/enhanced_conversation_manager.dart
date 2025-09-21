@@ -62,7 +62,7 @@ class EnhancedConversationManager {
                tokenCounter: tokenCounter ?? HeuristicTokenCounter(),
              ),
              tokenCounter: tokenCounter ?? HeuristicTokenCounter(),
-             config: MemoryConfig(
+             config: const MemoryConfig(
                maxTokens: 8000,
                enableSemanticMemory: false,
                enableSummarization: true,

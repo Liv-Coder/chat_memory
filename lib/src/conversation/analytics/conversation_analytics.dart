@@ -249,7 +249,7 @@ class ConversationAnalytics {
 
     try {
       if (messages.isEmpty) {
-        return ConversationMetrics(
+        return const ConversationMetrics(
           averageMessageLength: 0.0,
           messageFrequency: 0.0,
           conversationDuration: Duration.zero,
@@ -301,7 +301,7 @@ class ConversationAnalytics {
       );
 
       // Return empty metrics on error
-      return ConversationMetrics(
+      return const ConversationMetrics(
         averageMessageLength: 0.0,
         messageFrequency: 0.0,
         conversationDuration: Duration.zero,

@@ -20,7 +20,7 @@ void main() {
             'This is a test message that should be chunked into smaller pieces based on token limits.',
       );
 
-      final config = ChunkingConfig(
+      const config = ChunkingConfig(
         strategy: ChunkingStrategy.fixedToken,
         maxChunkTokens: 5,
       );
@@ -42,7 +42,7 @@ void main() {
             'This is a message with clear word boundaries that should be respected.',
       );
 
-      final config = ChunkingConfig(
+      const config = ChunkingConfig(
         strategy: ChunkingStrategy.wordBoundary,
         maxChunkTokens: 8,
       );
@@ -62,7 +62,7 @@ void main() {
             'This is a longer message that will be chunked with overlap to maintain context.',
       );
 
-      final config = ChunkingConfig(
+      const config = ChunkingConfig(
         strategy: ChunkingStrategy.fixedToken,
         maxChunkTokens: 6,
         overlapRatio: 0.3,
@@ -87,7 +87,7 @@ void main() {
         metadata: {'source': 'test'},
       );
 
-      final config = ChunkingConfig(
+      const config = ChunkingConfig(
         strategy: ChunkingStrategy.fixedToken,
         maxChunkTokens: 4,
       );
@@ -112,12 +112,18 @@ void main() {
 
       // Test with invalid configuration
       expect(
-        () => chunker.chunkMessage(message, ChunkingConfig(maxChunkTokens: 0)),
+        () => chunker.chunkMessage(
+          message,
+          const ChunkingConfig(maxChunkTokens: 0),
+        ),
         throwsA(isA<ArgumentError>()),
       );
 
       expect(
-        () => chunker.chunkMessage(message, ChunkingConfig(overlapRatio: 1.5)),
+        () => chunker.chunkMessage(
+          message,
+          const ChunkingConfig(overlapRatio: 1.5),
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
@@ -129,7 +135,7 @@ void main() {
         TestMessageFactory.create(content: 'Third message content'),
       ];
 
-      final config = ChunkingConfig(maxChunkTokens: 3);
+      const config = ChunkingConfig(maxChunkTokens: 3);
 
       final allChunks = <MessageChunk>[];
       for (final message in messages) {
@@ -153,7 +159,7 @@ void main() {
             TestMessageFactory.create(content: 'Message $i with some content'),
       );
 
-      final config = ChunkingConfig(maxChunkTokens: 3);
+      const config = ChunkingConfig(maxChunkTokens: 3);
 
       for (final message in messages) {
         await chunker.chunkMessage(message, config);
@@ -167,7 +173,7 @@ void main() {
     });
 
     test('MessageChunk toMessage conversion works correctly', () {
-      final chunk = MessageChunk(
+      const chunk = MessageChunk(
         id: 'test_chunk',
         content: 'Chunk content',
         parentMessageId: 'parent_msg',

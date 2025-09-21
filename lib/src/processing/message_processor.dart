@@ -8,7 +8,7 @@ import '../core/models/message.dart';
 import '../core/errors.dart';
 import '../core/logging/chat_memory_logger.dart';
 
-/// Processing stages that can be executed
+/// Processing stages that can be executed by the pipeline.
 enum ProcessingStage {
   validation,
   chunking,
@@ -17,9 +17,9 @@ enum ProcessingStage {
   postProcessing,
 }
 
-/// Configuration for pipeline processing
+/// Configuration for pipeline processing.
 class ProcessingConfig {
-  /// Stages to execute in order
+  /// Stages to execute in order.
   final List<ProcessingStage> stages;
 
   /// Chunking configuration
@@ -52,9 +52,9 @@ class ProcessingConfig {
   });
 }
 
-/// Error information for processing failures
+/// Error information for processing failures.
 class ProcessingError {
-  /// Stage where the error occurred
+  /// Stage where the error occurred.
   final ProcessingStage stage;
 
   /// Error message
@@ -83,9 +83,9 @@ class ProcessingError {
   }
 }
 
-/// Statistics about processing operations
+/// Statistics about processing operations.
 class ProcessingStats {
-  /// Total messages processed
+  /// Total messages processed.
   final int totalMessages;
 
   /// Successfully processed messages
@@ -120,9 +120,9 @@ class ProcessingStats {
   }
 }
 
-/// Result of pipeline processing
+/// Result of pipeline processing.
 class ProcessingResult {
-  /// Successfully processed messages
+  /// Successfully processed messages.
   final List<Message> processedMessages;
 
   /// Generated chunks
@@ -153,7 +153,10 @@ class ProcessingResult {
       processedMessages.isNotEmpty && errors.isNotEmpty;
 }
 
-/// Main pipeline orchestrator for message processing
+/// Main pipeline orchestrator for message processing.
+///
+/// Coordinates validation, chunking, embedding, storage, and post-processing
+/// stages based on the provided `ProcessingConfig`.
 class MessageProcessor {
   final MessageChunker? _chunker;
   final EmbeddingPipeline? _embeddingPipeline;
@@ -171,7 +174,7 @@ class MessageProcessor {
        _vectorStore = vectorStore,
        _sessionStore = sessionStore;
 
-  /// Process messages through the configured pipeline
+  /// Process a list of messages through the configured pipeline.
   Future<ProcessingResult> processMessages(
     List<Message> messages,
     ProcessingConfig config,
@@ -291,7 +294,7 @@ class MessageProcessor {
     }
   }
 
-  /// Process a single message through the pipeline
+  /// Process a single message through the pipeline.
   Future<ProcessingResult> processSingleMessage(
     Message message,
     ProcessingConfig config,
@@ -299,7 +302,7 @@ class MessageProcessor {
     return await processMessages([message], config);
   }
 
-  /// Get pipeline health status
+  /// Get a brief health status for pipeline components.
   Map<String, dynamic> getHealthStatus() {
     return {
       'chunker': _chunker != null ? 'available' : 'unavailable',
@@ -312,7 +315,7 @@ class MessageProcessor {
     };
   }
 
-  /// Get processing statistics from components
+  /// Get statistics from underlying components (chunker, embedding).
   Map<String, dynamic> getComponentStatistics() {
     return {
       'chunking': _chunker?.getStatistics(),

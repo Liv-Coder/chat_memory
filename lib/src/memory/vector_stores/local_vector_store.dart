@@ -328,7 +328,7 @@ class LocalVectorStore implements VectorStore {
 
   @override
   Future<List<VectorEntry>> getAll() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'LocalVectorStore',
       operation: 'getAll',
     );
@@ -357,7 +357,7 @@ class LocalVectorStore implements VectorStore {
 
   @override
   Future<void> clear() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'LocalVectorStore',
       operation: 'clear',
     );
@@ -384,7 +384,7 @@ class LocalVectorStore implements VectorStore {
 
   @override
   Future<int> count() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'LocalVectorStore',
       operation: 'count',
     );

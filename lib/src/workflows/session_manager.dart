@@ -378,7 +378,7 @@ class SessionManager {
   }) async {
     try {
       final allSessions = await _getAllSessionMetadata();
-      var filtered = allSessions.where(
+      final filtered = allSessions.where(
         (session) => _matchesFilter(session, filter),
       );
 
@@ -416,7 +416,7 @@ class SessionManager {
 
     try {
       final sessions = await searchSessions();
-      var toCleanup = sessions.where(
+      final toCleanup = sessions.where(
         (session) =>
             targetStates.contains(session.state) &&
             session.lastAccessedAt.isBefore(cutoff),

@@ -35,7 +35,7 @@ class MemoryCleaner {
 
       if (messagesToRemove.isEmpty) {
         _logger.fine('No messages to clean up by age', opCtx.toMap());
-        return CleanupResult(
+        return const CleanupResult(
           removedMessages: 0,
           removedVectors: 0,
           freedTokens: 0,
@@ -85,7 +85,7 @@ class MemoryCleaner {
 
       if (messages.length <= maxCount) {
         _logger.fine('No messages to clean up by count', opCtx.toMap());
-        return CleanupResult(
+        return const CleanupResult(
           removedMessages: 0,
           removedVectors: 0,
           freedTokens: 0,
@@ -151,7 +151,7 @@ class MemoryCleaner {
 
       if (messagesToRemove.isEmpty) {
         _logger.fine('No messages to clean up by relevance', opCtx.toMap());
-        return CleanupResult(
+        return const CleanupResult(
           removedMessages: 0,
           removedVectors: 0,
           freedTokens: 0,
@@ -187,7 +187,7 @@ class MemoryCleaner {
 
   /// Optimize vector storage by removing duplicate or outdated vectors
   Future<OptimizationResult> optimizeVectorStorage() async {
-    final opCtx = ErrorContext(
+    const opCtx = ErrorContext(
       component: 'MemoryCleaner',
       operation: 'optimizeVectorStorage',
     );
@@ -198,7 +198,7 @@ class MemoryCleaner {
           'No vector store available for optimization',
           opCtx.toMap(),
         );
-        return OptimizationResult(optimizedVectors: 0, reclaimedSpace: 0);
+        return const OptimizationResult(optimizedVectors: 0, reclaimedSpace: 0);
       }
 
       _logger.fine('Starting vector storage optimization', opCtx.toMap());
@@ -220,7 +220,7 @@ class MemoryCleaner {
         'optimizedVectors': 0,
       });
 
-      return OptimizationResult(optimizedVectors: 0, reclaimedSpace: 0);
+      return const OptimizationResult(optimizedVectors: 0, reclaimedSpace: 0);
     } catch (e, st) {
       ChatMemoryLogger.logError(
         _logger,

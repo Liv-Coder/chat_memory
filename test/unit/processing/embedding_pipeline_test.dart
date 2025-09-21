@@ -85,7 +85,7 @@ void main() {
         _createTestChunk('chunk3', 'Content for chunk 3'),
       ];
 
-      final config = EmbeddingConfig();
+      const config = EmbeddingConfig();
       final result = await pipeline.processChunks(chunks, config);
 
       expect(result.embeddings.length, equals(3));
@@ -100,7 +100,7 @@ void main() {
 
       final chunks = [_createTestChunk('chunk1', 'Content that will fail')];
 
-      final config = EmbeddingConfig();
+      const config = EmbeddingConfig();
       final result = await pipeline.processChunks(chunks, config);
 
       expect(result.embeddings.isEmpty, isTrue);
@@ -110,7 +110,7 @@ void main() {
     });
 
     test('respects circuit breaker configuration', () async {
-      final config = EmbeddingConfig(
+      const config = EmbeddingConfig(
         circuitBreaker: CircuitBreakerConfig(maxFailures: 2, enabled: true),
       );
 
@@ -130,7 +130,7 @@ void main() {
     });
 
     test('tracks processing statistics', () async {
-      final config = EmbeddingConfig();
+      const config = EmbeddingConfig();
 
       final chunks = List.generate(
         5,

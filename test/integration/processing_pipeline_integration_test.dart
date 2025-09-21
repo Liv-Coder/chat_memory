@@ -29,7 +29,7 @@ void main() {
       sessionStore = SessionStore(
         vectorStore: vectorStore,
         embeddingService: embeddingService,
-        config: MemoryConfig(enableSemanticMemory: true),
+        config: const MemoryConfig(enableSemanticMemory: true),
       );
 
       processor = MessageProcessor(
@@ -262,7 +262,7 @@ void main() {
           ProcessingPipelineConfig.fromPreset(
             ProcessingPreset.production,
           ).copyWith(
-            processingConfig: ProcessingConfig(
+            processingConfig: const ProcessingConfig(
               stages: [
                 ProcessingStage.validation,
                 ProcessingStage.chunking,
@@ -336,12 +336,12 @@ void main() {
           ProcessingPipelineConfig.fromPreset(
             ProcessingPreset.development,
           ).copyWith(
-            chunkingConfig: ChunkingConfig(
+            chunkingConfig: const ChunkingConfig(
               maxChunkTokens: 50,
               strategy: ChunkingStrategy.sentenceBoundary,
               preserveSentences: true,
             ),
-            embeddingConfig: EmbeddingConfig(
+            embeddingConfig: const EmbeddingConfig(
               maxBatchSize: 1,
               enableCaching: false,
               enableValidation: true,

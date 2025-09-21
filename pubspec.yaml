@@ -5,6 +5,7 @@ homepage: https://github.com/Liv-Coder/chat_memory
 repository: https://github.com/Liv-Coder/chat_memory
 issue_tracker: https://github.com/Liv-Coder/chat_memory/issues
 documentation: https://github.com/Liv-Coder/chat_memory#readme
+license: MIT
 
 environment:
   sdk: ">=3.9.2 <4.0.0"

@@ -593,37 +593,37 @@ class MemoryMonitor {
   /// Initialize default threshold configurations
   void _initializeDefaultThresholds() {
     addThreshold(
-      ThresholdConfig(
+      const ThresholdConfig(
         id: 'memory_usage_warning',
         description: 'Memory usage warning threshold',
         metric: 'memoryUsagePercentage',
         warningThreshold: 0.8,
         criticalThreshold: 0.95,
-        checkInterval: const Duration(minutes: 1),
+        checkInterval: Duration(minutes: 1),
         consecutiveViolations: 3,
       ),
     );
 
     addThreshold(
-      ThresholdConfig(
+      const ThresholdConfig(
         id: 'response_time_warning',
         description: 'Average response time warning threshold',
         metric: 'averageResponseTime',
         warningThreshold: 1000.0, // 1 second
         criticalThreshold: 5000.0, // 5 seconds
-        checkInterval: const Duration(minutes: 2),
+        checkInterval: Duration(minutes: 2),
         consecutiveViolations: 2,
       ),
     );
 
     addThreshold(
-      ThresholdConfig(
+      const ThresholdConfig(
         id: 'p95_response_time_warning',
         description: '95th percentile response time warning threshold',
         metric: 'p95ResponseTime',
         warningThreshold: 2000.0, // 2 seconds
         criticalThreshold: 10000.0, // 10 seconds
-        checkInterval: const Duration(minutes: 5),
+        checkInterval: Duration(minutes: 5),
         consecutiveViolations: 2,
       ),
     );

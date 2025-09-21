@@ -13,16 +13,21 @@
 
 include: package:lints/recommended.yaml
 
-# Uncomment the following section to specify additional rules.
+# Additional lint rules specific to this package to raise quality for pub.dev
+linter:
+  rules:
+    - camel_case_types
+    - prefer_final_locals
+    # Temporarily not requiring public member docs to avoid blocking CI.
+    # - public_member_api_docs
+    - prefer_const_constructors
+    - prefer_const_declarations
 
-# linter:
-#   rules:
-#     - camel_case_types
-
-# analyzer:
-#   exclude:
-#     - path/to/excluded/files/**
-
+# Exclude generated files and build outputs from analysis
+analyzer:
+  exclude:
+    - build/**
+    - test/**.generated.dart
 # For more information about the core and recommended set of lints, see
 # https://dart.dev/go/core-lints
 

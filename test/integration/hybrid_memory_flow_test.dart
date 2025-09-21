@@ -17,7 +17,7 @@ void main() {
       await manager.storeMessageBatch(messages);
 
       // Simulate a user query that should retrieve semantically related items
-      final query = 'message_5';
+      const query = 'message_5';
 
       final ctx = await manager.getContext(messages, query);
 

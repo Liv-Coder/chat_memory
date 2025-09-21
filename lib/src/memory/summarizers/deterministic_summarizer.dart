@@ -17,7 +17,7 @@ class DeterministicSummarizer implements Summarizer {
     Validation.validatePositive(
       'maxChars',
       maxChars,
-      context: ErrorContext(
+      context: const ErrorContext(
         component: 'DeterministicSummarizer',
         operation: 'constructor',
       ),

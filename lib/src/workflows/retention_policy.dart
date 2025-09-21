@@ -616,7 +616,7 @@ class CompositeRetentionPolicy implements RetentionPolicy {
   @override
   void validate() {
     if (policies.isEmpty) {
-      throw ConfigurationException(
+      throw const ConfigurationException(
         'Composite policy must have at least one component policy',
         context: ErrorContext(
           operation: 'validate',

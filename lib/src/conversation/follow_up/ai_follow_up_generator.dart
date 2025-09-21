@@ -116,7 +116,7 @@ class AIFollowUpGenerator implements FollowUpGenerator {
       _recordRequest();
 
       // Simulate AI API call with context-aware responses
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
 
       if (config.apiKey == null) {
         throw ConfigurationException.missing('apiKey');

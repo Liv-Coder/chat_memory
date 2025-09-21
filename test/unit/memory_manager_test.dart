@@ -121,7 +121,7 @@ void main() {
       final embedding = FakeEmbeddingService(dims: 4);
       final tokenCounter = FakeTokenCounter();
       // low maxTokens to bypass precheck and force full processing
-      final cfg = MemoryConfig(
+      const cfg = MemoryConfig(
         maxTokens: 1,
         semanticTopK: 5,
         minSimilarity: 0.0,
@@ -140,6 +140,7 @@ void main() {
       await manager.storeMessageBatch(msgs);
 
       // query that is similar to message_3 (length-based embedding)
+      // ignore: prefer_const_declarations
       final query = 'message_3';
       final res = await manager.getContext(msgs, query);
 

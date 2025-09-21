@@ -5,7 +5,9 @@ import '../core/logging/chat_memory_logger.dart';
 import '../core/models/message.dart';
 import '../core/utils/token_counter.dart';
 
-/// Chunking strategies for different content types
+/// Chunking strategies for different content types.
+///
+/// Choose a strategy that best preserves semantics while keeping chunks small.
 enum ChunkingStrategy {
   /// Fixed token count chunking
   fixedToken,
@@ -32,9 +34,9 @@ enum ChunkingStrategy {
   semantic,
 }
 
-/// Configuration for message chunking behavior
+/// Configuration for message chunking behavior.
 class ChunkingConfig {
-  /// Maximum tokens per chunk
+  /// Maximum tokens per chunk.
   final int maxChunkTokens;
 
   /// Maximum characters per chunk
@@ -74,7 +76,7 @@ class ChunkingConfig {
   });
 }
 
-/// A chunk of content from a larger message
+/// A chunk of content extracted from a larger message.
 class MessageChunk {
   /// Unique identifier for this chunk
   final String id;
@@ -115,7 +117,7 @@ class MessageChunk {
     this.metadata,
   });
 
-  /// Convert chunk back to a Message
+  /// Convert this chunk back into a top-level `Message`.
   Message toMessage({required MessageRole role, required DateTime timestamp}) {
     final chunkMetadata = <String, dynamic>{
       'isChunk': true,
@@ -137,9 +139,9 @@ class MessageChunk {
   }
 }
 
-/// Statistics about chunking operations
+/// Statistics about chunking operations.
 class ChunkingStats {
-  /// Total messages processed
+  /// Total messages processed.
   final int totalMessages;
 
   /// Total chunks created
@@ -167,7 +169,10 @@ class ChunkingStats {
   });
 }
 
-/// Intelligent message chunker with configurable strategies
+/// Intelligent message chunker with configurable strategies.
+///
+/// Use `chunkMessage` or `chunkMessages` to split input messages into smaller
+/// `MessageChunk` items suitable for embedding or storage.
 class MessageChunker {
   final TokenCounter _tokenCounter;
   final _logger = ChatMemoryLogger.loggerFor('processing.message_chunker');
@@ -181,7 +186,7 @@ class MessageChunker {
   MessageChunker({required TokenCounter tokenCounter})
     : _tokenCounter = tokenCounter;
 
-  /// Chunk a single message into smaller pieces
+  /// Chunk a single `Message` into smaller `MessageChunk` pieces.
   Future<List<MessageChunk>> chunkMessage(
     Message message,
     ChunkingConfig config,
@@ -259,7 +264,7 @@ class MessageChunker {
     }
   }
 
-  /// Chunk multiple messages efficiently
+  /// Chunk multiple messages and return all generated chunks.
   Future<List<MessageChunk>> chunkMessages(
     List<Message> messages,
     ChunkingConfig config,
@@ -299,7 +304,7 @@ class MessageChunker {
     }
   }
 
-  /// Get chunking statistics
+  /// Get aggregated statistics about chunking operations performed so far.
   ChunkingStats getStatistics() {
     final avgChunksPerMessage = _totalMessagesProcessed > 0
         ? _totalChunksCreated / _totalMessagesProcessed
@@ -326,7 +331,7 @@ class MessageChunker {
     );
   }
 
-  /// Reset statistics
+  /// Reset accumulated chunking statistics to zero.
   void resetStatistics() {
     _totalMessagesProcessed = 0;
     _totalChunksCreated = 0;
@@ -469,7 +474,7 @@ class MessageChunker {
   List<MessageChunk> _chunkByWords(Message message, ChunkingConfig config) {
     final words = message.content.split(RegExp(r'\s+'));
     final chunks = <MessageChunk>[];
-    var currentChunk = <String>[];
+    final currentChunk = <String>[];
     var currentTokens = 0;
     var chunkIndex = 0;
     var currentPos = 0;
@@ -519,7 +524,7 @@ class MessageChunker {
   List<MessageChunk> _chunkBySentences(Message message, ChunkingConfig config) {
     final sentences = message.content.split(RegExp(r'[.!?]+\s+'));
     final chunks = <MessageChunk>[];
-    var currentSentences = <String>[];
+    final currentSentences = <String>[];
     var currentTokens = 0;
     var chunkIndex = 0;
     var currentPos = 0;
@@ -572,7 +577,7 @@ class MessageChunker {
   ) {
     final paragraphs = message.content.split('\n\n');
     final chunks = <MessageChunk>[];
-    var currentParagraphs = <String>[];
+    final currentParagraphs = <String>[];
     var currentTokens = 0;
     var chunkIndex = 0;
     var currentPos = 0;
@@ -678,7 +683,7 @@ class MessageChunker {
     }
 
     final chunks = <MessageChunk>[];
-    var content = message.content;
+    final content = message.content;
     var chunkIndex = 0;
     var currentPos = 0;
 

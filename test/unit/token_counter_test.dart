@@ -17,14 +17,14 @@ void main() {
 
     test('whitespace normalization does not change estimate', () {
       final counter = HeuristicTokenCounter(charsPerToken: 4);
-      final a = 'hello   world';
-      final b = 'hello world';
+      const a = 'hello   world';
+      const b = 'hello world';
       expect(counter.estimateTokens(a), equals(counter.estimateTokens(b)));
     });
 
     test('handles unicode and long text', () {
       final counter = HeuristicTokenCounter(charsPerToken: 4);
-      final text = 'Hello   world\n\n\u{1F600}';
+      const text = 'Hello   world\n\n\u{1F600}';
       final estimate = counter.estimateTokens(text);
       expect(estimate, greaterThan(0));
       final long = 'a' * 1000;
