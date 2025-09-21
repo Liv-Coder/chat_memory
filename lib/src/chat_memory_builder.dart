@@ -2,6 +2,7 @@ import 'memory/hybrid_memory_factory.dart';
 import 'conversation/enhanced_conversation_manager.dart';
 import 'conversation/callbacks/callback_manager.dart';
 import 'chat_memory_config.dart';
+import 'chat_memory_facade.dart';
 import 'core/errors.dart';
 import 'core/logging/chat_memory_logger.dart';
 import 'core/utils/token_counter.dart';
@@ -345,7 +346,7 @@ class ChatMemoryBuilder {
   ///
   /// Throws [ConfigurationException] if the configuration is invalid.
   /// Throws [MemoryException] if initialization fails.
-  Future<EnhancedConversationManager> build() async {
+  Future<ChatMemory> build() async {
     final ctx = ErrorContext(
       component: 'ChatMemoryBuilder',
       operation: 'build',
@@ -376,7 +377,11 @@ class ChatMemoryBuilder {
         onMessageStored: _onMemoryOptimized,
       );
 
-      return conversationManager;
+      // Create and return ChatMemory facade
+      return ChatMemory.fromBuilder(
+        conversationManager: conversationManager,
+        config: _config,
+      );
     } catch (e, st) {
       ChatMemoryLogger.logError(
         ChatMemoryLogger.loggerFor('chat_memory.builder'),

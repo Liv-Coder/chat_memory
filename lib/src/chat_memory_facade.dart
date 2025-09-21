@@ -128,6 +128,20 @@ class ChatMemory {
     return ChatMemoryBuilder();
   }
 
+  /// Internal factory method for ChatMemoryBuilder.
+  ///
+  /// This method is used by ChatMemoryBuilder to create ChatMemory instances
+  /// with the configured settings.
+  static ChatMemory fromBuilder({
+    required EnhancedConversationManager conversationManager,
+    required ChatMemoryConfig config,
+  }) {
+    return ChatMemory._(
+      conversationManager: conversationManager,
+      config: config,
+    );
+  }
+
   /// Add a message to the conversation.
   ///
   /// The message will be stored in memory and used for future context retrieval.
@@ -351,6 +365,11 @@ class ChatMemory {
   /// Check if the instance is properly initialized.
   bool get isInitialized =>
       true; // Always true since _conversationManager is non-nullable
+
+  /// Get access to the underlying conversation manager for advanced operations.
+  ///
+  /// This provides access to advanced features not exposed through the simplified facade.
+  EnhancedConversationManager get conversationManager => _conversationManager;
 
   /// Update the system prompt for the current conversation.
   ///

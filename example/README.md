@@ -1,361 +1,224 @@
-# Chat Memory Example App
+# Chat Memory Demo App 🧠💬
 
-A Flutter demonstration app showcasing the **Hybrid Memory System** with AI-powered conversations that remember context across sessions.
-
-![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)
-![Google AI](https://img.shields.io/badge/Google%20AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
+A clean, modern Flutter app demonstrating the powerful **Chat Memory** package with enhanced follow-up generation capabilities.
 
 ## ✨ Features
 
-### 🧠 **Hybrid Memory System**
+### 🏗️ **Clean Architecture**
 
-- **Automatic Summarization**: Compresses older conversations while preserving key information
-- **Semantic Search**: Finds relevant context from past conversations using vector embeddings
-- **Rolling Window**: Keeps recent messages for immediate context
-- **Smart Token Management**: Optimizes content within AI model token limits
+- **Modern folder structure** following Flutter best practices
+- **Separation of concerns** with clear presentation/business logic layers
+- **Reusable components** for maintainable code
+- **Material Design 3** theming with light/dark mode support
 
-### 🏭 **Advanced Processing Pipeline**
+### 🧠 **Advanced Memory System**
 
-- **Intelligent Chunking**: Multiple strategies for message segmentation (token-based, sentence-based, sliding window)
-- **Resilient Embeddings**: Circuit breakers, retry logic, and adaptive batch processing
-- **Configurable Stages**: Flexible pipeline orchestration with validation, chunking, embedding, and storage
-- **Performance Monitoring**: Comprehensive statistics, health checks, and optimization metrics
+- **Simplified ChatMemory API** with declarative methods (`addMessage()`, `getContext()`)
+- **Hybrid memory management** with automatic summarization
+- **Semantic search** through conversation history
+- **Vector storage** for intelligent context retrieval
+- **Real-time memory statistics** and usage monitoring
 
-### 🤖 **AI Integration**
+### 💡 **Enhanced Follow-up Generation**
 
-- **Google Gemini AI**: Real AI responses with your own API key
-- **Simulation Mode**: Demo responses when no API key is configured
-- **Memory-Aware Responses**: AI references past conversations intelligently
-- **Context-Rich Prompts**: Enhanced prompts with summarized history
+- **4 Generation Modes**:
+  - **Enhanced**: Context-aware heuristic suggestions
+  - **AI**: Intelligent suggestions powered by AI
+  - **Domain**: Specialized templates for specific domains
+  - **Adaptive**: Learning from user interactions
+- **Visual mode indicators** with color-coded UI
+- **Smart debouncing** for optimal performance
+- **User interaction tracking** for continuous improvement
 
-### 🔒 **Privacy & Security**
+### 🎨 **Modern UI Components**
 
-- **Local Storage**: API keys stored securely on your device
-- **No Data Sharing**: All conversation data stays on your device
-- **Masked Display**: API keys shown with masking for security
-- **Easy Management**: Clear or update API keys anytime
+- **Message bubbles** with gradient styling and avatars
+- **Interactive follow-up chips** with mode-aware theming
+- **Expandable memory stats card** with real-time data
+- **Smooth loading states** and error handling
+- **Responsive design** with proper accessibility support
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Flutter 3.9.2 or later
-- Dart SDK
-- Google Gemini API key (optional, app works in demo mode without it)
+- Flutter 3.0+ installed
+- Dart 3.0+ installed
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone the repository**:
 
    ```bash
    git clone <repository-url>
    cd chat_memory/example
    ```
 
-2. **Install dependencies**
+2. **Install dependencies**:
 
    ```bash
    flutter pub get
    ```
 
-3. **Run the app**
+3. **Run the app**:
+
    ```bash
    flutter run
    ```
 
-## 🔑 API Key Setup
-
-### Getting Your Gemini API Key
-
-1. **Visit Google AI Studio**: Go to [ai.google.dev](https://ai.google.dev)
-2. **Sign In**: Use your Google account
-3. **Create API Key**: Click "Get API key" and create a new key
-4. **Copy the Key**: Save it securely (starts with `AIza...`)
-
-### Setting Up in the App
-
-1. **Open the app** and tap the 🔑 key icon in the top bar
-2. **Paste your API key** in the text field
-3. **Save** - the key is encrypted and stored locally
-4. **Test** the connection using the "Test API" button
-5. **Start chatting** with real AI responses!
-
-### Demo Mode
-
-- **No API Key Required**: App works in simulation mode
-- **Feature Demonstration**: Shows all memory system capabilities
-- **Educational**: Perfect for understanding the system without costs
-- **Easy Upgrade**: Add your API key anytime to get real AI
-
-## 💬 How to Use
+## 📱 Usage
 
 ### Basic Chat
 
-1. Type your message in the text field
-2. Tap send or press Enter
-3. Watch the AI respond with memory context
-4. See memory information in the expandable cards
+1. **Start chatting** - Type any message to begin
+2. **Watch memory build** - The system automatically stores and processes your messages
+3. **View statistics** - Expand the memory stats card to see real-time data
+4. **Try follow-ups** - Tap suggested follow-up questions to continue the conversation
+
+### Follow-up Modes
+
+Switch between different follow-up generation modes using the mode selector in the app bar:
+
+- 🧠 **Enhanced**: Best for general conversations with smart context awareness
+- 🤖 **AI**: Powered by AI for more creative and intelligent suggestions
+- 📚 **Domain**: Specialized for specific domains (technical, casual, etc.)
+- 📈 **Adaptive**: Learns from your preferences over time
 
 ### Memory Features
 
-- **View Summaries**: Tap the summary card to see compressed history
-- **Semantic Context**: Check which past messages were found relevant
-- **Memory Stats**: Monitor token usage and conversation statistics
-- **Follow-up Suggestions**: Use AI-generated conversation starters
+- **Ask about past topics** - \"What did we discuss about X?\"
+- **Test memory recall** - \"Do you remember when I mentioned Y?\"
+- **Explore context** - \"How does your memory system work?\"
 
-### Settings & Management
-
-- **🔑 API Settings**: Manage your Gemini API key
-- **🧠 Memory Info**: View detailed memory system information
-- **🗑️ Clear Chat**: Reset conversation and memory
-- **🌓 Theme Toggle**: Switch between light and dark modes
-
-## 🏗️ Architecture
-
-### Memory Layers
-
-```
-┌─────────────────────────────┐
-│     User Input Query        │
-└──────────┬──────────────────┘
-           │
-┌──────────▼──────────────────┐
-│    Pre-Check (Token)        │
-│  ✓ Within budget → Return   │
-│  ✗ Over budget → Continue   │
-└──────────┬──────────────────┘
-           │
-┌──────────▼──────────────────┐
-│   Summarization Layer       │
-│  • Compress old messages    │
-│  • Preserve key context     │
-│  • Generate summaries       │
-└──────────┬──────────────────┘
-           │
-┌──────────▼──────────────────┐
-│    Semantic Layer          │
-│  • Vector search           │
-│  • Find relevant context   │
-│  • Retrieve past facts     │
-└──────────┬──────────────────┘
-           │
-┌──────────▼──────────────────┐
-│   Final Prompt Assembly     │
-│  System + Summaries +       │
-│  Semantic + Recent Messages │
-└─────────────────────────────┘
-```
-
-### Components
-
-- **EnhancedConversationManager**: Core memory orchestration
-- **LocalVectorStore**: Persistent semantic storage
-- **SimpleEmbeddingService**: Text-to-vector conversion
-- **SummarizationStrategy**: Smart context compression
-- **AIAdapter**: Gemini API integration with fallback
-
-## 📊 Memory Monitoring
-
-The app provides real-time insight into the memory system:
-
-### Token Information Bar
-
-- **🤖/🔑 API**: Shows if using real AI or demo mode
-- **🎯 Tokens**: Current prompt token count
-- **📝 Summary**: Whether summarization occurred
-- **💬 Messages**: Number of included messages
-- **🔍 Semantic**: Relevant memories found
-- **🧠 Memory**: Memory system type
-
-### Expandable Cards
-
-- **📄 Memory Summary**: View compressed conversation history
-- **🔍 Semantic Memories**: See relevant past context with similarity scores
-- **📊 Memory Stats**: Detailed conversation and storage statistics
-
-## 🎛️ Configuration Options
-
-### Memory Presets
-
-The underlying system supports multiple presets:
-
-- **Development**: Fast in-memory storage
-- **Production**: Persistent SQLite storage (used in app)
-- **Performance**: Optimized for large conversations
-- **Minimal**: Summarization only, no semantic search
-
-### Customization
-
-The app demonstrates these configurable aspects:
-
-- Token budgets and limits
-- Semantic similarity thresholds
-- Summarization chunk sizes
-- Vector storage backends
-- Embedding dimensions
-
-## 🔒 Privacy & Data
-
-### What's Stored Locally
-
-- **Conversation History**: All your messages
-- **Vector Embeddings**: Semantic search data
-- **API Key**: Encrypted and stored securely
-- **Memory Summaries**: Compressed conversation history
-
-### What's NOT Stored
-
-- **No Cloud Backup**: Everything stays on your device
-- **No Analytics**: No usage tracking
-- **No Data Sharing**: Your conversations are private
-
-### API Usage
-
-- **Your API Key**: Direct connection to Google Gemini
-- **Your Costs**: You control API usage and costs
-- **Your Data**: Messages sent to Gemini for responses only
-
-## 🛠️ Development
-
-### Project Structure
+## 🏗️ Architecture Overview
 
 ```
 lib/
-├── main.dart                 # Main app and chat UI
-├── chat_manager.dart         # Enhanced conversation management
-├── ai_adapter.dart          # Gemini API integration
-└── api_key_screen.dart      # API key management UI
-
-examples/
-├── hybrid_memory_example.dart    # Comprehensive hybrid memory examples
-└── advanced_processing_example.dart  # Processing pipeline demonstrations
+├── core/                          # Core functionality
+│   ├── constants/                 # App-wide constants
+│   ├── models/                    # Data models
+│   ├── services/                  # Business services
+│   └── theme/                     # UI theming
+├── presentation/                  # UI layer
+│   ├── screens/                   # App screens
+│   └── widgets/                   # Reusable UI components
+├── chat_manager.dart             # Main business logic
+└── main.dart                     # App entry point
 ```
 
-### Key Dependencies
+### Key Components
 
-```yaml
-dependencies:
-  flutter: sdk: flutter
-  chat_memory: ^1.0.0         # Hybrid memory system
-  google_generative_ai: ^0.2.0 # Gemini AI SDK
-  shared_preferences: ^2.2.2   # Secure local storage
-  flutter_markdown: ^0.7.0     # Rich text display
-  google_fonts: ^4.0.4         # Beautiful typography
+#### **ChatManager** 📊
+
+Simplified wrapper around ChatMemory with clean API:
+
+```dart
+// Add messages
+await chatManager.addUserMessage(\"Hello!\");
+await chatManager.addAssistantMessage(\"Hi there!\");
+
+// Get context
+final context = await chatManager.getContext(maxTokens: 8000);
+
+// Generate follow-ups
+final suggestions = await chatManager.getFollowUpSuggestions();
 ```
 
-### Building
+#### **UI Components** 🎨
 
-```bash
-# Debug build
-flutter run
+- **ChatScreen**: Main interface with modern layout
+- **MessageBubble**: Beautiful message styling with animations
+- **FollowUpSuggestions**: Interactive suggestion chips
+- **MemoryStatsCard**: Real-time memory monitoring
+- **ChatHeader**: Mode switching and controls
 
-# Release build
-flutter build apk --release
-flutter build ios --release
+## 🔧 Configuration
+
+### Memory Settings
+
+Customize memory behavior in `chat_manager.dart`:
+
+```dart
+_chatMemory = await ChatMemoryBuilder()
+    .production()                    // Use production preset
+    .withSystemPrompt(prompt)        // Custom system prompt
+    .withMaxTokens(8000)            // Token limit
+    .build();
 ```
 
-## 🆘 Troubleshooting
+### Follow-up Configuration
+
+Adjust follow-up generation in `app_constants.dart`:
+
+```dart
+static const int maxFollowUpSuggestions = 3;
+static const String defaultFollowUpMode = 'enhanced';
+```
+
+### UI Theming
+
+Customize appearance in `app_theme.dart`:
+
+```dart
+// Follow-up mode colors
+static const Map<String, Color> followUpModeColors = {
+  'enhanced': Color(0xFF6C5CE7),
+  'ai': Color(0xFF00B4D8),
+  'domain': Color(0xFF2ECC71),
+  'adaptive': Color(0xFFFF6B6B),
+};
+```
+
+## 🎯 Performance Optimizations
+
+- **Debounced follow-up generation** prevents excessive API calls
+- **Lazy loading** of memory statistics
+- **Efficient state management** with minimal rebuilds
+- **Error boundaries** with graceful fallbacks
+- **Memory leak prevention** with proper disposal
+
+## 🔍 Troubleshooting
 
 ### Common Issues
 
-**"API key test failed"**
+**Follow-ups not generating:**
 
-- Verify your API key is correct
-- Check internet connection
-- Ensure sufficient API quota at Google AI Studio
+- Check if ChatManager is properly initialized
+- Verify the selected follow-up mode is supported
+- Look for error messages in debug console
 
-**"Running in simulation mode"**
+**Memory stats not loading:**
 
-- This is normal without an API key
-- Add your Gemini API key for real AI responses
+- Ensure conversation has started
+- Try refreshing stats manually
+- Check for permission issues
 
-**Memory not working**
+**Performance issues:**
 
-- Check that vector storage is enabled
-- Try clearing and restarting the conversation
-- Memory builds up over multiple exchanges
-
-**App crashes or errors**
-
-- Check Flutter and Dart versions
-- Run `flutter clean && flutter pub get`
-- Restart the app
-
-### Getting Help
-
-- Check the main chat_memory package documentation
-- Review Google AI Studio documentation
-- File issues on the project repository
-
-## 📋 Requirements
-
-### System Requirements
-
-- **Flutter**: 3.9.2+
-- **Dart**: 3.9.2+
-- **iOS**: 12.0+ (for iOS deployment)
-- **Android**: API 21+ (for Android deployment)
-- **Platforms**: iOS, Android, Web, Desktop
-
-### Optional Requirements
-
-- **Google Gemini API Key**: For real AI responses
-- **Internet Connection**: For API calls (demo mode works offline)
-
-## 🎯 Use Cases
-
-### Personal Assistant
-
-- **Daily Planning**: AI remembers your schedule and preferences
-- **Follow-up Questions**: Contextual conversations across sessions
-- **Knowledge Building**: Accumulates understanding over time
-
-### Learning & Education
-
-- **Study Sessions**: AI recalls previous topics and progress
-- **Concept Building**: Connects new information to past discussions
-- **Personalized Help**: Adapts to your learning style and pace
-
-### Creative Projects
-
-- **Story Development**: Remembers characters and plot points
-- **Brainstorming**: Builds on previous creative sessions
-- **Project Management**: Tracks ideas and decisions over time
-
-### Professional Use
-
-- **Meeting Preparation**: Recalls past discussion points
-- **Research Assistant**: Connects new findings to previous research
-- **Decision Support**: References historical context and decisions
-
-## 🚀 Future Enhancements
-
-### Planned Features
-
-- **Export/Import**: Save and share conversation memory
-- **Multiple Models**: Support for other AI providers
-- **Voice Input**: Speech-to-text conversation
-- **Rich Media**: Image and file memory integration
-- **Collaboration**: Shared memory sessions
-
-### Advanced Features
-
-- **Custom Embeddings**: Use specialized embedding models
-- **Cloud Sync**: Optional cloud storage for memory
-- **Memory Analytics**: Detailed usage and pattern analysis
-- **Plugin System**: Extensible memory processors
-
-## 📄 License
-
-This example app is part of the chat_memory package and follows the same licensing terms.
+- Reduce max token limit
+- Clear conversation history
+- Check for memory leaks in debug mode
 
 ## 🤝 Contributing
 
-Contributions are welcome! This example helps demonstrate the capabilities of the hybrid memory system and serves as a reference for integration.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes following the existing architecture
+4. Test thoroughly
+5. Submit a pull request
+
+## 📜 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Built with the powerful **Chat Memory** package
+- Uses **Material Design 3** for modern UI
+- Inspired by best practices in Flutter development
 
 ---
 
-**Built with ❤️ using the Chat Memory Hybrid System**
+**Happy Chatting!** 🎉
 
-_Demonstrating the future of conversational AI with persistent, intelligent memory._
+For more information about the Chat Memory package, visit the [main documentation](../README.md).
