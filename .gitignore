@@ -80,7 +80,7 @@ tmp/
 coverage/
 
 # Keep GitHub metadata folder ignored
-.github/
+.github/prompts/
 .specify/
 
 # Keep user-specific metadata out
