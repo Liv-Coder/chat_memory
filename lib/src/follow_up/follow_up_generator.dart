@@ -40,13 +40,13 @@ class HeuristicFollowUpGenerator implements FollowUpGenerator {
       if (s == null || s.trim().isEmpty) return '';
       final single = s.replaceAll(RegExp(r'\s+'), ' ').trim();
       if (single.length <= limit) return single;
-      return single.substring(0, limit).trim() + '…';
+      return '${single.substring(0, limit).trim()}…';
     }
 
     if (lastUser != null) {
       final userSnippet = snippet(lastUser.content, 60);
       if (userSnippet.isNotEmpty) {
-        suggestions.add("Do you mean \"${userSnippet}\" or something else?");
+        suggestions.add("Do you mean \"$userSnippet\" or something else?");
       }
     }
 
@@ -54,7 +54,7 @@ class HeuristicFollowUpGenerator implements FollowUpGenerator {
       final assistantSnippet = snippet(lastAssistant.content, 80);
       if (assistantSnippet.isNotEmpty) {
         suggestions.add(
-          "Would you like more detail on this suggestion: \"${assistantSnippet}\"?",
+          "Would you like more detail on this suggestion: \"$assistantSnippet\"?",
         );
       }
     }

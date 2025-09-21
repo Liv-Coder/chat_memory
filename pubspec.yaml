@@ -1,13 +1,44 @@
 name: chat_memory
-description: A starting point for Dart libraries or applications.
+description: A modular Dart library that provides robust chat-memory management for LLM-based applications. Features hybrid memory (in-memory + vector stores), summarization strategies, semantic retrieval, and pluggable embedding/vector-store adapters to make conversational agents stateful and context-aware.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+homepage: https://github.com/Liv-Coder/chat_memory
+repository: https://github.com/Liv-Coder/chat_memory
+issue_tracker: https://github.com/Liv-Coder/chat_memory/issues
+documentation: https://github.com/Liv-Coder/chat_memory#readme
 
 environment:
-  sdk: ^3.9.2
+  sdk: ">=3.9.2 <4.0.0"
 
-# Add regular dependencies here.
+# Discoverability keywords for pub.dev
+keywords:
+  - chat
+  - memory
+  - conversation
+  - ai
+  - llm
+  - summarization
+  - semantic-search
+  - vector-store
+  - embeddings
+  - nlp
+  - dart
+  - flutter
+
+# Optional topics to assist GitHub categorization
+topics:
+  - ai
+  - nlp
+  - embeddings
+  - memory
+  - chat
+
+# Where to publish; remove or change if you don't want to publish to pub.dev
+publish_to: "https://pub.dev"
+
+# Dependencies
 dependencies:
+  logging: ^1.2.0
+  meta: ^1.16.0
   path: ^1.9.0
   sqflite: ^2.3.0
   sqflite_common_ffi: ^2.3.0+2
@@ -15,3 +46,7 @@ dependencies:
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6
+  mockito: ^5.4.4
+  build_runner: ^2.4.7
+  fake_async: ^1.3.2
+  matcher: ^0.12.16

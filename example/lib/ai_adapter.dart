@@ -296,17 +296,6 @@ ${hasMemory ? "I can see we have conversation history stored, which helps me pro
     await _clearStoredApiKey();
   }
 
-  /// Load API key from persistent storage
-  static Future<void> _loadApiKey() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _apiKey = prefs.getString('gemini_api_key');
-    } catch (e) {
-      // If SharedPreferences fails, keep _apiKey as null
-      _apiKey = null;
-    }
-  }
-
   /// Save API key to persistent storage
   static Future<void> _saveApiKey(String apiKey) async {
     try {

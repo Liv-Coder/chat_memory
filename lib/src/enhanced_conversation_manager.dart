@@ -9,6 +9,9 @@ import 'memory/hybrid_memory_factory.dart';
 import 'summarizers/deterministic_summarizer.dart';
 import 'strategies/summarization_strategy.dart';
 
+import 'logging/chat_memory_logger.dart';
+import 'package:logging/logging.dart';
+
 /// Enhanced conversation manager that integrates with the hybrid memory system
 ///
 /// This manager provides the same interface as the original ConversationManager
@@ -20,6 +23,17 @@ class EnhancedConversationManager {
   FollowUpGenerator? _followUpGenerator;
   final void Function(Message)? _onSummaryCreated;
   final void Function(Message)? _onMessageStored;
+
+  // Logger for manager-level events and errors
+  final Logger _logger = ChatMemoryLogger.loggerFor(
+    'enhanced_conversation_manager',
+  );
+
+  // Callback failure tracking to allow disabling misbehaving callbacks.
+  int _onMessageStoredFailureCount = 0;
+  bool _disableOnMessageStoredCallback = false;
+  int _onSummaryCreatedFailureCount = 0;
+  bool _disableOnSummaryCreatedCallback = false;
 
   EnhancedConversationManager({
     PersistenceStrategy? persistence,
@@ -33,15 +47,24 @@ class EnhancedConversationManager {
        _followUpGenerator = followUpGenerator,
        _onSummaryCreated = onSummaryCreated,
        _onMessageStored = onMessageStored,
+       // If a MemoryManager wasn't provided, construct a safe default without
+       // semantic memory enabled to avoid requiring vector stores at construction time.
        _memoryManager =
            memoryManager ??
-           HybridMemoryFactory.createCustom(
+           MemoryManager(
              contextStrategy: SummarizationStrategyFactory.balanced(
                maxTokens: 8000,
                summarizer: DeterministicSummarizer(),
                tokenCounter: tokenCounter ?? HeuristicTokenCounter(),
              ),
              tokenCounter: tokenCounter ?? HeuristicTokenCounter(),
+             config: MemoryConfig(
+               maxTokens: 8000,
+               enableSemanticMemory: false,
+               enableSummarization: true,
+             ),
+             vectorStore: null,
+             embeddingService: null,
            );
 
   /// Create with a specific memory preset
@@ -77,14 +100,38 @@ class EnhancedConversationManager {
     await _persistence.saveMessages([message]);
 
     // Store message in vector store for semantic retrieval
-    await _memoryManager.storeMessage(message);
+    try {
+      await _memoryManager.storeMessage(message);
+    } catch (e, st) {
+      ChatMemoryLogger.logError<void>(
+        _logger,
+        'appendMessage.memoryStore',
+        e,
+        stackTrace: st,
+        params: {'messageId': message.id},
+      );
+      // continue; do not fail the append operation
+    }
 
-    // Trigger callback
-    if (_onMessageStored != null) {
+    // Trigger callback with failure tracking
+    if (_onMessageStored != null && !_disableOnMessageStoredCallback) {
       try {
         _onMessageStored(message);
-      } catch (_) {
-        // Swallow callback errors to avoid breaking flow
+      } catch (e, st) {
+        ChatMemoryLogger.logError<void>(
+          _logger,
+          'callback.onMessageStored',
+          e,
+          stackTrace: st,
+          params: {'messageId': message.id},
+        );
+        _onMessageStoredFailureCount++;
+        if (_onMessageStoredFailureCount >= 3) {
+          _disableOnMessageStoredCallback = true;
+          _logger.warning(
+            'Disabling onMessageStored callback after repeated failures',
+          );
+        }
       }
     }
   }
@@ -184,11 +231,25 @@ class EnhancedConversationManager {
         timestamp: DateTime.now().toUtc(),
         metadata: contextResult.metadata,
       );
-
-      try {
-        _onSummaryCreated(summaryMessage);
-      } catch (_) {
-        // Swallow callback errors
+      if (!_disableOnSummaryCreatedCallback) {
+        try {
+          _onSummaryCreated(summaryMessage);
+        } catch (e, st) {
+          ChatMemoryLogger.logError<void>(
+            _logger,
+            'callback.onSummaryCreated',
+            e,
+            stackTrace: st,
+            params: {'summaryId': summaryMessage.id},
+          );
+          _onSummaryCreatedFailureCount++;
+          if (_onSummaryCreatedFailureCount >= 3) {
+            _disableOnSummaryCreatedCallback = true;
+            _logger.warning(
+              'Disabling onSummaryCreated callback after repeated failures',
+            );
+          }
+        }
       }
     }
 
@@ -249,7 +310,14 @@ class EnhancedConversationManager {
     try {
       final messages = await _persistence.loadMessages();
       return await _followUpGenerator!.generate(messages, max: max);
-    } catch (_) {
+    } catch (e, st) {
+      ChatMemoryLogger.logError<void>(
+        _logger,
+        'generateFollowUpQuestions',
+        e,
+        stackTrace: st,
+        params: {'max': max},
+      );
       return [];
     }
   }
@@ -273,10 +341,17 @@ class EnhancedConversationManager {
 
     // Get vector store stats if available
     int? vectorCount;
-    if (_memoryManager.vectorStore != null) {
+    final vs = _memoryManager.vectorStore;
+    if (vs != null) {
       try {
-        vectorCount = await _memoryManager.vectorStore!.count();
-      } catch (_) {
+        vectorCount = await vs.count();
+      } catch (e, st) {
+        ChatMemoryLogger.logError<void>(
+          _logger,
+          'getStats.vectorCount',
+          e,
+          stackTrace: st,
+        );
         vectorCount = null;
       }
     }
@@ -300,11 +375,17 @@ class EnhancedConversationManager {
     // Most persistence strategies don't have a clear method, so we'll work around it
 
     // Clear vector store if available
-    if (_memoryManager.vectorStore != null) {
+    final vs2 = _memoryManager.vectorStore;
+    if (vs2 != null) {
       try {
-        await _memoryManager.vectorStore!.clear();
-      } catch (_) {
-        // Ignore errors
+        await vs2.clear();
+      } catch (e, st) {
+        ChatMemoryLogger.logError<void>(
+          _logger,
+          'clear.vectorStore',
+          e,
+          stackTrace: st,
+        );
       }
     }
   }

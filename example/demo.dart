@@ -1,4 +1,5 @@
 import 'package:chat_memory/chat_memory.dart';
+import 'dart:developer' as developer;
 
 /// Comprehensive demo showcasing the hybrid memory system capabilities
 ///
@@ -9,8 +10,8 @@ import 'package:chat_memory/chat_memory.dart';
 /// - Performance monitoring and statistics
 /// - Error handling and edge cases
 void main() async {
-  print('🚀 Chat Memory Hybrid System Demo');
-  print('=' * 50);
+  developer.log('🚀 Chat Memory Hybrid System Demo');
+  developer.log('=' * 50);
 
   await demoBasicUsage();
   await demoSemanticRetrieval();
@@ -18,13 +19,13 @@ void main() async {
   await demoAdvancedConfiguration();
   await demoPerformanceMonitoring();
 
-  print('\n✅ Demo completed successfully!');
+  developer.log('\n✅ Demo completed successfully!');
 }
 
 /// Demo 1: Basic usage with automatic summarization
 Future<void> demoBasicUsage() async {
-  print('\n📝 Demo 1: Basic Usage with Summarization');
-  print('-' * 40);
+  developer.log('\n📝 Demo 1: Basic Usage with Summarization');
+  developer.log('-' * 40);
 
   // Create manager with small token budget to trigger summarization
   final manager = await EnhancedConversationManager.create(
@@ -69,24 +70,24 @@ Future<void> demoBasicUsage() async {
     userQuery: 'deep learning explanation',
   );
 
-  print('Final prompt (${prompt.estimatedTokens} tokens):');
-  print('─' * 30);
-  print(prompt.promptText);
+  developer.log('Final prompt (${prompt.estimatedTokens} tokens):');
+  developer.log('─' * 30);
+  developer.log(prompt.promptText);
 
   if (prompt.summary != null) {
-    print('\n📄 Generated Summary:');
-    print(prompt.summary!);
+    developer.log('\n📄 Generated Summary:');
+    developer.log(prompt.summary!);
   } else {
-    print('\n📄 No summarization needed (within token budget)');
+    developer.log('\n📄 No summarization needed (within token budget)');
   }
 
-  print('\n📊 Messages: ${prompt.includedMessages.length} included');
+  developer.log('\n📊 Messages: ${prompt.includedMessages.length} included');
 }
 
 /// Demo 2: Semantic retrieval across different topics
 Future<void> demoSemanticRetrieval() async {
-  print('\n🔍 Demo 2: Semantic Retrieval');
-  print('-' * 40);
+  developer.log('\n🔍 Demo 2: Semantic Retrieval');
+  developer.log('-' * 40);
 
   final manager = await EnhancedConversationManager.create(
     preset: MemoryPreset.production,
@@ -136,29 +137,29 @@ Future<void> demoSemanticRetrieval() async {
     userQuery: 'bread baking techniques and tips',
   );
 
-  print('🔎 Query: "bread baking techniques and tips"');
-  print(
+  developer.log('🔎 Query: "bread baking techniques and tips"');
+  developer.log(
     '📚 Semantic messages retrieved: ${enhancedPrompt.semanticMessages.length}',
   );
 
   for (int i = 0; i < enhancedPrompt.semanticMessages.length; i++) {
     final msg = enhancedPrompt.semanticMessages[i];
     final similarity = msg.metadata?['similarity']?.toStringAsFixed(3) ?? 'N/A';
-    print(
+    developer.log(
       '  ${i + 1}. Similarity: $similarity | ${msg.content.substring(0, 60)}...',
     );
   }
 
-  print('\n🎯 Processing metadata:');
+  developer.log('\n🎯 Processing metadata:');
   enhancedPrompt.metadata.forEach((key, value) {
-    print('  $key: $value');
+    developer.log('  $key: $value');
   });
 }
 
 /// Demo 3: Different memory presets
 Future<void> demoMemoryPresets() async {
-  print('\n⚙️ Demo 3: Memory Presets Comparison');
-  print('-' * 40);
+  developer.log('\n⚙️ Demo 3: Memory Presets Comparison');
+  developer.log('-' * 40);
 
   final testMessages = [
     'You are a knowledgeable assistant.',
@@ -178,7 +179,7 @@ Future<void> demoMemoryPresets() async {
   ];
 
   for (final preset in presets) {
-    print('\n🔧 Testing ${preset.toString().split('.').last} preset:');
+    developer.log('\n🔧 Testing ${preset.toString().split('.').last} preset:');
 
     final manager = await EnhancedConversationManager.create(
       preset: preset,
@@ -209,19 +210,21 @@ Future<void> demoMemoryPresets() async {
     final prompt = await manager.buildPrompt(clientTokenBudget: 800);
     final stats = await manager.getStats();
 
-    print(
+    developer.log(
       '  Messages: ${stats.totalMessages} total, ${prompt.includedMessages.length} included',
     );
-    print('  Tokens: ${prompt.estimatedTokens}');
-    print('  Vectors: ${stats.vectorCount ?? 'N/A'}');
-    print('  Summary: ${prompt.summary != null ? 'Generated' : 'None'}');
+    developer.log('  Tokens: ${prompt.estimatedTokens}');
+    developer.log('  Vectors: ${stats.vectorCount ?? 'N/A'}');
+    developer.log(
+      '  Summary: ${prompt.summary != null ? 'Generated' : 'None'}',
+    );
   }
 }
 
 /// Demo 4: Advanced configuration with builder pattern
 Future<void> demoAdvancedConfiguration() async {
-  print('\n🏗️ Demo 4: Advanced Configuration');
-  print('-' * 40);
+  developer.log('\n🏗️ Demo 4: Advanced Configuration');
+  developer.log('-' * 40);
 
   var summaryCount = 0;
   var messageCount = 0;
@@ -238,11 +241,13 @@ Future<void> demoAdvancedConfiguration() async {
     memoryManager: customMemoryManager,
     onSummaryCreated: (summary) {
       summaryCount++;
-      print('📄 Summary created: ${summary.content.substring(0, 50)}...');
+      developer.log(
+        '📄 Summary created: ${summary.content.substring(0, 50)}...',
+      );
     },
     onMessageStored: (message) {
       messageCount++;
-      print(
+      developer.log(
         '💾 Stored ${message.role.toString().split('.').last}: ${message.content.substring(0, 30)}...',
       );
     },
@@ -272,17 +277,19 @@ Future<void> demoAdvancedConfiguration() async {
   // Build prompt with custom configuration
   final prompt = await manager.buildPrompt(clientTokenBudget: 1200);
 
-  print('\n📋 Custom Configuration Results:');
-  print('  Messages processed: $messageCount');
-  print('  Summaries created: $summaryCount');
-  print('  Final tokens: ${prompt.estimatedTokens}');
-  print('  Vector store enabled: ${customMemoryManager.vectorStore != null}');
+  developer.log('\n📋 Custom Configuration Results:');
+  developer.log('  Messages processed: $messageCount');
+  developer.log('  Summaries created: $summaryCount');
+  developer.log('  Final tokens: ${prompt.estimatedTokens}');
+  developer.log(
+    '  Vector store enabled: ${customMemoryManager.vectorStore != null}',
+  );
 }
 
 /// Demo 5: Performance monitoring and statistics
 Future<void> demoPerformanceMonitoring() async {
-  print('\n📊 Demo 5: Performance Monitoring');
-  print('-' * 40);
+  developer.log('\n📊 Demo 5: Performance Monitoring');
+  developer.log('-' * 40);
 
   final manager = await EnhancedConversationManager.create(
     preset: MemoryPreset.performance,
@@ -310,7 +317,7 @@ Future<void> demoPerformanceMonitoring() async {
     'You are an environmental science expert and sustainability consultant.',
   );
 
-  print('🔄 Building extended conversation...');
+  developer.log('🔄 Building extended conversation...');
   final startTime = DateTime.now();
 
   for (final (topic, question) in topics) {
@@ -329,36 +336,42 @@ Future<void> demoPerformanceMonitoring() async {
     userQuery: 'environmental sustainability overview',
   );
 
-  print('\n📈 Performance Statistics:');
-  print('─' * 25);
-  print('Conversation Building:');
-  print('  Time taken: ${processingTime.inMilliseconds}ms');
-  print('  Messages added: ${topics.length * 2 + 1}'); // +1 for system message
+  developer.log('\n📈 Performance Statistics:');
+  developer.log('─' * 25);
+  developer.log('Conversation Building:');
+  developer.log('  Time taken: ${processingTime.inMilliseconds}ms');
+  developer.log(
+    '  Messages added: ${topics.length * 2 + 1}',
+  ); // +1 for system message
 
-  print('\nMemory Statistics:');
-  print(stats.toString());
+  developer.log('\nMemory Statistics:');
+  developer.log(stats.toString());
 
-  print('Context Retrieval:');
-  print('  Processing time: ${enhancedPrompt.metadata['processingTimeMs']}ms');
-  print('  Strategy used: ${enhancedPrompt.metadata['strategyUsed']}');
-  print(
+  developer.log('Context Retrieval:');
+  developer.log(
+    '  Processing time: ${enhancedPrompt.metadata['processingTimeMs']}ms',
+  );
+  developer.log('  Strategy used: ${enhancedPrompt.metadata['strategyUsed']}');
+  developer.log(
     '  Original messages: ${enhancedPrompt.metadata['originalMessageCount']}',
   );
-  print('  Final messages: ${enhancedPrompt.metadata['finalMessageCount']}');
-  print(
+  developer.log(
+    '  Final messages: ${enhancedPrompt.metadata['finalMessageCount']}',
+  );
+  developer.log(
     '  Summarized messages: ${enhancedPrompt.metadata['summarizedMessageCount']}',
   );
-  print(
+  developer.log(
     '  Semantic retrievals: ${enhancedPrompt.metadata['semanticRetrievalCount']}',
   );
 
   if (enhancedPrompt.semanticMessages.isNotEmpty) {
-    print('\nSemantic Retrieval Results:');
+    developer.log('\nSemantic Retrieval Results:');
     for (int i = 0; i < enhancedPrompt.semanticMessages.length; i++) {
       final msg = enhancedPrompt.semanticMessages[i];
       final similarity =
           msg.metadata?['similarity']?.toStringAsFixed(3) ?? 'N/A';
-      print(
+      developer.log(
         '  ${i + 1}. Score: $similarity | ${msg.content.substring(0, 50)}...',
       );
     }
@@ -367,19 +380,19 @@ Future<void> demoPerformanceMonitoring() async {
   // Test follow-up generation (if available)
   final followUps = await manager.generateFollowUpQuestions(max: 3);
   if (followUps.isNotEmpty) {
-    print('\n❓ Suggested Follow-ups:');
+    developer.log('\n❓ Suggested Follow-ups:');
     for (int i = 0; i < followUps.length; i++) {
-      print('  ${i + 1}. ${followUps[i]}');
+      developer.log('  ${i + 1}. ${followUps[i]}');
     }
   }
 
-  print('\n🎯 Final Context Summary:');
-  print('  Total tokens: ${enhancedPrompt.estimatedTokens}');
-  print(
+  developer.log('\n🎯 Final Context Summary:');
+  developer.log('  Total tokens: ${enhancedPrompt.estimatedTokens}');
+  developer.log(
     '  Within budget: ${enhancedPrompt.estimatedTokens <= 2500 ? '✅' : '❌'}',
   );
 
   if (enhancedPrompt.summary != null) {
-    print('  Summary length: ${enhancedPrompt.summary!.length} chars');
+    developer.log('  Summary length: ${enhancedPrompt.summary!.length} chars');
   }
 }

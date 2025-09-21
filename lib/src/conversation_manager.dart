@@ -13,12 +13,12 @@ import 'summarizers/summarization_config.dart';
 /// Orchestrates conversation memory: persists messages, applies strategies,
 /// runs summarizers, and builds `PromptPayload` objects ready to send to an LLM.
 class ConversationManager {
-  PersistenceStrategy _persistence;
+  final PersistenceStrategy _persistence;
   ContextStrategy _strategy;
-  TokenCounter _tokenCounter;
+  final TokenCounter _tokenCounter;
   Summarizer? _summarizer;
-  SummarizationConfig? _summarizationConfig;
-  void Function(Message)? _onSummaryCreated;
+  final SummarizationConfig? _summarizationConfig;
+  final void Function(Message)? _onSummaryCreated;
   FollowUpGenerator? _followUpGenerator;
 
   ConversationManager({
@@ -170,7 +170,7 @@ class ConversationManager {
     // Default: summarize all excluded messages.
     List<Message> messagesToSummarize = excluded;
     if (_summarizationConfig != null) {
-      final cfg = _summarizationConfig!;
+      final cfg = _summarizationConfig;
       // Ensure excluded messages are ordered oldest -> newest for selection logic.
       final excludedOrdered = List<Message>.from(excluded.reversed);
 
@@ -243,7 +243,7 @@ class ConversationManager {
       // onSummaryCreated hook
       if (_onSummaryCreated != null) {
         try {
-          _onSummaryCreated!(newSummaryMessage);
+          _onSummaryCreated(newSummaryMessage);
         } catch (_) {
           // swallow callback errors to avoid breaking flow
         }

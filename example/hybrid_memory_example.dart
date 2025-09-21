@@ -1,11 +1,12 @@
 import 'package:chat_memory/chat_memory.dart';
+import 'dart:developer' as developer;
 
 /// Comprehensive examples demonstrating the hybrid memory system
 ///
 /// This file shows various usage patterns for the enhanced chat memory
 /// package with summarization and semantic retrieval capabilities.
 void main() async {
-  print('=== Chat Memory Hybrid System Examples ===\n');
+  developer.log('=== Chat Memory Hybrid System Examples ===\n');
 
   // Run different examples
   await basicUsageExample();
@@ -14,13 +15,13 @@ void main() async {
   await semanticRetrievalExample();
   await conversationStatsExample();
 
-  print('\n=== All Examples Complete ===');
+  developer.log('\n=== All Examples Complete ===');
 }
 
 /// Example 1: Basic usage with default settings
 Future<void> basicUsageExample() async {
-  print('📝 Example 1: Basic Usage');
-  print('─' * 40);
+  developer.log('📝 Example 1: Basic Usage');
+  developer.log('─' * 40);
 
   // Create a simple memory manager for development
   final manager = await EnhancedConversationManager.create(
@@ -51,9 +52,9 @@ Future<void> basicUsageExample() async {
     userQuery: 'budget planning for Europe trip',
   );
 
-  print('Final prompt (${prompt.estimatedTokens} tokens):');
-  print(prompt.promptText);
-  print('\nSummary: ${prompt.summary ?? "None"}');
+  developer.log('Final prompt (${prompt.estimatedTokens} tokens):');
+  developer.log(prompt.promptText);
+  developer.log('\nSummary: ${prompt.summary ?? "None"}');
 
   // Get enhanced prompt with semantic info
   final enhancedPrompt = await manager.buildEnhancedPrompt(
@@ -61,20 +62,20 @@ Future<void> basicUsageExample() async {
     userQuery: 'budget planning for Europe trip',
   );
 
-  print(
+  developer.log(
     '\nSemantic messages retrieved: ${enhancedPrompt.semanticMessages.length}',
   );
-  print('Processing metadata: ${enhancedPrompt.metadata}');
-  print("");
+  developer.log('Processing metadata: ${enhancedPrompt.metadata}');
+  developer.log("");
 }
 
 /// Example 2: Using different preset configurations
 Future<void> presetConfigurationsExample() async {
-  print('⚙️ Example 2: Preset Configurations');
-  print('─' * 40);
+  developer.log('⚙️ Example 2: Preset Configurations');
+  developer.log('─' * 40);
 
   // Development preset - fast, in-memory
-  print('🔧 Development preset:');
+  developer.log('🔧 Development preset:');
   final devManager = await EnhancedConversationManager.create(
     preset: MemoryPreset.development,
     maxTokens: 2000,
@@ -83,7 +84,7 @@ Future<void> presetConfigurationsExample() async {
   await _showStats(devManager, 'Development');
 
   // Production preset - persistent storage with semantic search
-  print('\n🏭 Production preset:');
+  developer.log('\n🏭 Production preset:');
   final prodManager = await EnhancedConversationManager.create(
     preset: MemoryPreset.production,
     maxTokens: 4000,
@@ -93,7 +94,7 @@ Future<void> presetConfigurationsExample() async {
   await _showStats(prodManager, 'Production');
 
   // Minimal preset - only summarization
-  print('\n⚡ Minimal preset:');
+  developer.log('\n⚡ Minimal preset:');
   final minimalManager = await EnhancedConversationManager.create(
     preset: MemoryPreset.minimal,
     maxTokens: 1500,
@@ -101,13 +102,13 @@ Future<void> presetConfigurationsExample() async {
   await _addSampleConversation(minimalManager);
   await _showStats(minimalManager, 'Minimal');
 
-  print('');
+  developer.log('');
 }
 
 /// Example 3: Advanced builder pattern configuration
 Future<void> advancedBuilderExample() async {
-  print('🏗️ Example 3: Advanced Builder Configuration');
-  print('─' * 40);
+  developer.log('🏗️ Example 3: Advanced Builder Configuration');
+  developer.log('─' * 40);
 
   // Use builder pattern for fine-grained control
   final customManager = MemoryManagerBuilder()
@@ -120,10 +121,12 @@ Future<void> advancedBuilderExample() async {
   final conversationManager = EnhancedConversationManager(
     memoryManager: customManager,
     onSummaryCreated: (summary) {
-      print('📄 Summary created: ${summary.content.substring(0, 50)}...');
+      developer.log(
+        '📄 Summary created: ${summary.content.substring(0, 50)}...',
+      );
     },
     onMessageStored: (message) {
-      print(
+      developer.log(
         '💾 Message stored: ${message.role} (${message.content.length} chars)',
       );
     },
@@ -142,16 +145,16 @@ Future<void> advancedBuilderExample() async {
 
   final prompt = await conversationManager.buildPrompt(clientTokenBudget: 2000);
 
-  print('\nCustom configuration result:');
-  print('Tokens: ${prompt.estimatedTokens}');
-  print('Messages included: ${prompt.includedMessages.length}');
-  print('');
+  developer.log('\nCustom configuration result:');
+  developer.log('Tokens: ${prompt.estimatedTokens}');
+  developer.log('Messages included: ${prompt.includedMessages.length}');
+  developer.log('');
 }
 
 /// Example 4: Semantic retrieval in action
 Future<void> semanticRetrievalExample() async {
-  print('🔍 Example 4: Semantic Retrieval Demonstration');
-  print('─' * 40);
+  developer.log('🔍 Example 4: Semantic Retrieval Demonstration');
+  developer.log('─' * 40);
 
   final manager = await EnhancedConversationManager.create(
     preset: MemoryPreset.production,
@@ -193,25 +196,27 @@ Future<void> semanticRetrievalExample() async {
     userQuery: 'making risotto cooking techniques',
   );
 
-  print('Query: "making risotto cooking techniques"');
-  print('Semantic messages found: ${enhancedPrompt.semanticMessages.length}');
+  developer.log('Query: "making risotto cooking techniques"');
+  developer.log(
+    'Semantic messages found: ${enhancedPrompt.semanticMessages.length}',
+  );
 
   for (final msg in enhancedPrompt.semanticMessages) {
     final similarity = msg.metadata?['similarity'] ?? 0.0;
-    print(
+    developer.log(
       '  - Similarity: ${similarity.toStringAsFixed(3)} | ${msg.content.substring(0, 60)}...',
     );
   }
 
-  print('\nFull enhanced prompt:');
-  print(enhancedPrompt.promptText);
-  print('');
+  developer.log('\nFull enhanced prompt:');
+  developer.log(enhancedPrompt.promptText);
+  developer.log('');
 }
 
 /// Example 5: Conversation statistics and monitoring
 Future<void> conversationStatsExample() async {
-  print('📊 Example 5: Conversation Statistics');
-  print('─' * 40);
+  developer.log('📊 Example 5: Conversation Statistics');
+  developer.log('─' * 40);
 
   final manager = await EnhancedConversationManager.create(
     preset: MemoryPreset.production,
@@ -223,20 +228,20 @@ Future<void> conversationStatsExample() async {
 
   // Get comprehensive stats
   final stats = await manager.getStats();
-  print(stats.toString());
+  developer.log(stats.toString());
 
   // Generate follow-up questions (if generator is registered)
   final followUps = await manager.generateFollowUpQuestions(max: 3);
   if (followUps.isNotEmpty) {
-    print('Suggested follow-up questions:');
+    developer.log('Suggested follow-up questions:');
     for (int i = 0; i < followUps.length; i++) {
-      print('  ${i + 1}. ${followUps[i]}');
+      developer.log('  ${i + 1}. ${followUps[i]}');
     }
   } else {
-    print('No follow-up generator registered.');
+    developer.log('No follow-up generator registered.');
   }
 
-  print('');
+  developer.log('');
 }
 
 /// Helper: Add a sample conversation
@@ -260,12 +265,12 @@ Future<void> _showStats(
   String preset,
 ) async {
   final stats = await manager.getStats();
-  print(
+  developer.log(
     '$preset stats: ${stats.totalMessages} messages, ${stats.totalTokens} tokens',
   );
 
   if (stats.vectorCount != null) {
-    print('  Vector store: ${stats.vectorCount} embeddings');
+    developer.log('  Vector store: ${stats.vectorCount} embeddings');
   }
 }
 

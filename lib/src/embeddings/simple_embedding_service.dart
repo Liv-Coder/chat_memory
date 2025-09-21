@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
+
+import '../errors.dart';
+import '../logging/chat_memory_logger.dart';
 import 'embedding_service.dart';
 
 /// Simple deterministic embedding service for testing and development
@@ -10,10 +13,37 @@ import 'embedding_service.dart';
 class SimpleEmbeddingService implements EmbeddingService {
   final int _dimensions;
   final EmbeddingConfig _config;
+  final _logger = ChatMemoryLogger.loggerFor('embedding.simple');
 
   SimpleEmbeddingService({int dimensions = 384, EmbeddingConfig? config})
     : _dimensions = dimensions,
-      _config = config ?? const EmbeddingConfig();
+      _config = config ?? const EmbeddingConfig() {
+    final ctx = ErrorContext(
+      component: 'SimpleEmbeddingService',
+      operation: 'constructor',
+      params: {'dimensions': _dimensions, 'maxBatchSize': _config.maxBatchSize},
+    );
+
+    try {
+      Validation.validatePositive('dimensions', _dimensions, context: ctx);
+      Validation.validatePositive(
+        'embeddingConfig.maxBatchSize',
+        _config.maxBatchSize,
+        context: ctx,
+      );
+      _logger.fine('Initialized SimpleEmbeddingService', ctx.toMap());
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'constructor',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
+  }
 
   @override
   int get dimensions => _dimensions;
@@ -23,31 +53,116 @@ class SimpleEmbeddingService implements EmbeddingService {
 
   @override
   Future<List<double>> embed(String text) async {
-    if (text.isEmpty) {
-      return List.filled(_dimensions, 0.0);
+    final opCtx = ErrorContext(
+      component: 'SimpleEmbeddingService',
+      operation: 'embed',
+      params: {'textLength': text.length},
+    );
+
+    final sw = Stopwatch()..start();
+    try {
+      if (text.trim().isEmpty) {
+        _logger.warning(
+          'Received empty or whitespace-only text for embedding; returning zero vector',
+          opCtx.toMap(),
+        );
+        return List.filled(_dimensions, 0.0);
+      }
+
+      final embedding = _generateEmbedding(text);
+      final normalized = _config.normalize
+          ? _normalizeVector(embedding)
+          : embedding;
+
+      // Validate produced embedding
+      if (normalized.any((v) => v.isNaN || v.isInfinite)) {
+        throw EmbeddingException(
+          'Generated embedding contains NaN or infinite values',
+        );
+      }
+
+      _logger.fine('embed completed', {
+        ...opCtx.toMap(),
+        'durationMs': sw.elapsedMilliseconds,
+      });
+      return normalized;
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'embed',
+        e,
+        stackTrace: st,
+        params: opCtx.toMap(),
+        shouldRethrow: false,
+      );
+      throw EmbeddingException('Failed to generate embedding', e);
+    } finally {
+      sw.stop();
     }
-
-    // Generate deterministic embedding based on text content
-    final embedding = _generateEmbedding(text);
-
-    return _config.normalize ? _normalizeVector(embedding) : embedding;
   }
 
   @override
   Future<List<List<double>>> embedBatch(List<String> texts) async {
-    final embeddings = <List<double>>[];
+    final opCtx = ErrorContext(
+      component: 'SimpleEmbeddingService',
+      operation: 'embedBatch',
+      params: {'count': texts.length, 'maxBatchSize': _config.maxBatchSize},
+    );
 
-    // Process in batches to respect maxBatchSize
-    for (int i = 0; i < texts.length; i += _config.maxBatchSize) {
-      final batchEnd = min(i + _config.maxBatchSize, texts.length);
-      final batch = texts.sublist(i, batchEnd);
+    final sw = Stopwatch()..start();
+    try {
+      Validation.validateListNotEmpty('texts', texts, context: opCtx);
 
-      for (final text in batch) {
-        embeddings.add(await embed(text));
+      final result = <List<double>>[];
+
+      for (int i = 0; i < texts.length; i += _config.maxBatchSize) {
+        final batchEnd = min(i + _config.maxBatchSize, texts.length);
+        final batch = texts.sublist(i, batchEnd);
+
+        for (final text in batch) {
+          try {
+            final emb = await embed(text);
+            result.add(emb);
+          } catch (e, st) {
+            // Log per-item failure and fail the whole batch as embedding correctness is critical.
+            final itemCtx = ErrorContext(
+              component: 'SimpleEmbeddingService',
+              operation: 'embedBatch.item',
+              params: {
+                'textSample': text.length > 64 ? text.substring(0, 64) : text,
+              },
+            );
+            ChatMemoryLogger.logError(
+              _logger,
+              'embedBatch.item',
+              e,
+              stackTrace: st,
+              params: itemCtx.toMap(),
+              shouldRethrow: false,
+            );
+            throw EmbeddingException('Failed to embed batch item', e);
+          }
+        }
       }
-    }
 
-    return embeddings;
+      _logger.fine('embedBatch completed', {
+        ...opCtx.toMap(),
+        'durationMs': sw.elapsedMilliseconds,
+      });
+      return result;
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'embedBatch',
+        e,
+        stackTrace: st,
+        params: opCtx.toMap(),
+        shouldRethrow: false,
+      );
+      throw EmbeddingException('Batch embedding failed', e);
+    } finally {
+      sw.stop();
+    }
   }
 
   /// Generate a deterministic embedding vector from text
@@ -121,10 +236,11 @@ extension on Random {
 
     final u = nextDouble();
     final v = nextDouble();
-    final mag = 0.5 * log(1.0 - u);
-    final angle = 2.0 * pi * v;
+    // Use Box-Muller; protect against log(0).
+    final r = sqrt(-2.0 * log(max(u, 1e-12)));
+    final theta = 2.0 * pi * v;
 
-    _spare = mag * sin(angle);
-    return mag * cos(angle);
+    _spare = r * sin(theta);
+    return r * cos(theta);
   }
 }

@@ -166,7 +166,7 @@ class ChatManager {
     };
 
     if (enhanced) {
-      final enhancedPayload = payload as EnhancedPromptPayload;
+      final enhancedPayload = payload;
       info.addAll({
         'semantic_messages_count': enhancedPayload.semanticMessages.length,
         'query_used': enhancedPayload.query,

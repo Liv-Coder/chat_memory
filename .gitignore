@@ -1,40 +1,45 @@
-# https://dart.dev/guides/libraries/private-files
-# Created by `dart pub`
-.dart_tool/
+# Dart & Flutter recommended ignores
+# See: https://dart.dev/tools/pub/package-layout and https://flutter.dev/docs/development/tools/ide
 
-# Avoid committing pubspec.lock for library packages; see
-# https://dart.dev/guides/libraries/private-files#pubspeclock.
+# Dart tooling
+.dart_tool/
+.packages
+
+# Do not commit pubspec.lock for libraries; keep it ignored for library packages
+# If this is an app, consider committing pubspec.lock instead
 pubspec.lock
 
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
 
-# Testing
-coverage/
+# Flutter plugin caches & metadata
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-versions
+.flutter-plugins-dependencies
+.flutter-plugins
 
-# Production builds
+# Build outputs
 build/
+coverage/
 dist/
-.next/
-out/
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Example/android build outputs (if present)
+**/android/.gradle/
+**/android/app/build/
+**/android/build/
+**/build/
 
-# IDE and Editor files
+# IDE and editor settings
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+*.iml
+*.ipr
+*.iws
 
-# OS generated files
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -43,26 +48,45 @@ out/
 ehthumbs.db
 Thumbs.db
 
-# Logs
+# Environment variables and secret files
+.env
+.env.*.local
+.env.local
+
+# Logs and runtime data
 *.log
 logs/
-
-# Runtime data
 pids
 *.pid
-*.seed
 *.pid.lock
 
-# Temporary files
+# Temporary files and caches
 *.tmp
 *.temp
 .cache/
+/.dart_tool/
+tmp/
 
-# GitHub specific
+# Misc
+*.swp
+*.swo
+*~
+
+# Database & local state
+*.db
+*.sqlite
+
+# Ignore coverage reports
+coverage/
+
+# Keep GitHub metadata folder ignored
 .github/
-
-# Specify specific
 .specify/
 
-# Test files
-test/
+# Keep user-specific metadata out
+.idea/
+.vscode/
+
+# NOTE:
+# - Removed Node.js / Next.js specific entries (node_modules/, .next/) because this is a Dart package.
+# - Removed exclusion of `test/` so unit/integration tests are included in the package repository.

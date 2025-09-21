@@ -1,10 +1,14 @@
+import 'dart:async';
+
+import 'package:logging/logging.dart';
+
 import '../models/message.dart';
 import '../utils/token_counter.dart';
 import '../strategies/context_strategy.dart';
-import '../strategies/summarization_strategy.dart';
-import '../summarizers/summarizer.dart';
 import '../vector_stores/vector_store.dart';
 import '../embeddings/embedding_service.dart';
+import '../errors.dart';
+import '../logging/chat_memory_logger.dart';
 
 /// Configuration for the MemoryManager
 class MemoryConfig {
@@ -76,13 +80,65 @@ class MemoryManager {
   final VectorStore? vectorStore;
   final EmbeddingService? embeddingService;
 
+  final Logger _logger = ChatMemoryLogger.loggerFor('memory_manager');
+
+  // Simple circuit-breaker counters for semantic failures (per instance).
+  int _semanticFailureCount = 0;
+  DateTime? _lastSemanticFailure;
+
   MemoryManager({
     required this.contextStrategy,
     required this.tokenCounter,
     this.config = const MemoryConfig(),
     this.vectorStore,
     this.embeddingService,
-  });
+  }) {
+    // Validate configuration early and fail fast with descriptive errors.
+    final ctx = ErrorContext(
+      component: 'MemoryManager',
+      operation: 'constructor',
+      params: {
+        'maxTokens': config.maxTokens,
+        'semanticTopK': config.semanticTopK,
+        'minSimilarity': config.minSimilarity,
+        'recencyWeight': config.recencyWeight,
+      },
+    );
+
+    try {
+      Validation.validatePositive('maxTokens', config.maxTokens, context: ctx);
+      Validation.validateNonNegative(
+        'semanticTopK',
+        config.semanticTopK,
+        context: ctx,
+      );
+      Validation.validateRange(
+        'minSimilarity',
+        config.minSimilarity,
+        min: 0.0,
+        max: 1.0,
+        context: ctx,
+      );
+      Validation.validateRange(
+        'recencyWeight',
+        config.recencyWeight,
+        min: 0.0,
+        max: 1.0,
+        context: ctx,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError<void>(
+        _logger,
+        'constructor.validation',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+    }
+
+    _logger.fine('MemoryManager initialized with config=${config.toString()}');
+  }
 
   /// Main entry point: Get context from messages and user query
   ///
@@ -95,56 +151,118 @@ class MemoryManager {
     List<Message> messages,
     String userQuery,
   ) async {
-    final startTime = DateTime.now();
-
-    // Step 1: Pre-checks
-    final preCheckResult = await _performPreChecks(messages);
-    if (preCheckResult != null) {
-      return preCheckResult;
-    }
-
-    // Step 2: Apply context strategy (summarization layer)
-    final strategyResult = await contextStrategy.apply(
-      messages: messages,
-      tokenBudget: config.maxTokens,
-      tokenCounter: tokenCounter,
-    );
-
-    // Step 3: Semantic retrieval (if enabled)
-    final semanticMessages = config.enableSemanticMemory
-        ? await _performSemanticRetrieval(userQuery, messages)
-        : <Message>[];
-
-    // Step 4: Construct final prompt
-    final finalMessages = await _constructFinalPrompt(
-      strategyResult,
-      semanticMessages,
-      messages,
-    );
-
-    // Calculate final token estimate
-    final finalTokens = _calculateTokens(finalMessages);
-
-    // Create metadata
-    final metadata = {
-      'processingTimeMs': DateTime.now().difference(startTime).inMilliseconds,
-      'originalMessageCount': messages.length,
-      'finalMessageCount': finalMessages.length,
-      'summarizedMessageCount': strategyResult.excluded.length,
-      'semanticRetrievalCount': semanticMessages.length,
-      'strategyUsed': strategyResult.name,
-      'summaryCount': strategyResult.summaries.length,
+    final correlationId = DateTime.now().microsecondsSinceEpoch.toString();
+    final opParams = {
+      'correlationId': correlationId,
+      'messageCount': messages.length,
     };
-
-    return MemoryContextResult(
-      messages: finalMessages,
-      estimatedTokens: finalTokens,
-      summary: strategyResult.summaries.isNotEmpty
-          ? strategyResult.summaries.map((s) => s.summary).join('\n\n')
-          : null,
-      semanticMessages: semanticMessages,
-      metadata: metadata,
+    final sw = ChatMemoryLogger.logOperationStart(
+      _logger,
+      'getContext',
+      params: opParams,
     );
+
+    try {
+      // Step 1: Pre-checks
+      final preCheckResult = await _performPreChecks(messages);
+      if (preCheckResult != null) {
+        ChatMemoryLogger.logOperationEnd(
+          _logger,
+          'getContext',
+          sw,
+          result: {
+            'path': 'preCheck',
+            'finalCount': preCheckResult.messages.length,
+          },
+        );
+        return preCheckResult;
+      }
+
+      // Step 2: Apply context strategy (summarization layer)
+      final strategyResult = await contextStrategy.apply(
+        messages: messages,
+        tokenBudget: config.maxTokens,
+        tokenCounter: tokenCounter,
+      );
+
+      // Step 3: Semantic retrieval (if enabled)
+      final semanticMessages = config.enableSemanticMemory
+          ? await _performSemanticRetrieval(
+              userQuery,
+              messages,
+              correlationId: correlationId,
+            )
+          : <Message>[];
+
+      // Step 4: Construct final prompt
+      final finalMessages = await _constructFinalPrompt(
+        strategyResult,
+        semanticMessages,
+        messages,
+      );
+
+      // Calculate final token estimate
+      final finalTokens = _calculateTokens(finalMessages);
+
+      // Create metadata
+      final metadata = {
+        'processingTimeMs': DateTime.now()
+            .difference(
+              DateTime.fromMillisecondsSinceEpoch(
+                int.parse(correlationId) ~/ 1000,
+              ),
+            )
+            .inMilliseconds,
+        'originalMessageCount': messages.length,
+        'finalMessageCount': finalMessages.length,
+        'summarizedMessageCount': strategyResult.excluded.length,
+        'semanticRetrievalCount': semanticMessages.length,
+        'strategyUsed': strategyResult.name,
+        'summaryCount': strategyResult.summaries.length,
+        'correlationId': correlationId,
+      };
+
+      ChatMemoryLogger.logOperationEnd(
+        _logger,
+        'getContext',
+        sw,
+        result: {
+          'finalMessages': finalMessages.length,
+          'estimatedTokens': finalTokens,
+        },
+      );
+      return MemoryContextResult(
+        messages: finalMessages,
+        estimatedTokens: finalTokens,
+        summary: strategyResult.summaries.isNotEmpty
+            ? strategyResult.summaries.map((s) => s.summary).join('\n\n')
+            : null,
+        semanticMessages: semanticMessages,
+        metadata: metadata,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError<void>(
+        _logger,
+        'getContext',
+        e,
+        stackTrace: st,
+        params: opParams,
+      );
+      // In the rare event of a top-level failure, return a minimal safe result instead of throwing.
+      final fallback = MemoryContextResult(
+        messages: messages.take(1).toList(),
+        estimatedTokens: _calculateTokens(messages.take(1).toList()),
+        semanticMessages: [],
+        metadata: {'error': e.toString(), 'correlationId': correlationId},
+      );
+      ChatMemoryLogger.logOperationEnd(
+        _logger,
+        'getContext',
+        sw,
+        result: {'path': 'fallback', 'finalMessages': fallback.messages.length},
+      );
+      return fallback;
+    }
   }
 
   /// Store a message in the vector store for semantic retrieval
@@ -155,19 +273,76 @@ class MemoryManager {
       return;
     }
 
-    try {
-      // Skip system and summary messages from semantic storage
-      if (message.role == MessageRole.system ||
-          message.role == MessageRole.summary) {
-        return;
-      }
+    // Skip system and summary messages from semantic storage
+    if (message.role == MessageRole.system ||
+        message.role == MessageRole.summary) {
+      return;
+    }
 
-      final embedding = await embeddingService!.embed(message.content);
-      final vectorEntry = message.toVectorEntry(embedding);
-      await vectorStore!.store(vectorEntry);
-    } catch (e) {
-      // Log error but don't fail the operation
-      // In production, you might want to use a proper logging framework
+    final opCtx = ErrorContext(
+      component: 'MemoryManager',
+      operation: 'storeMessage',
+      params: {'messageId': message.id},
+    );
+    final logger = _logger;
+    const maxRetries = 2;
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        final embedding = await embeddingService!.embed(message.content);
+        Validation.validateEmbeddingVector(
+          'embedding',
+          embedding,
+          context: opCtx,
+        );
+        final vectorEntry = message.toVectorEntry(embedding);
+        await vectorStore!.store(vectorEntry);
+        logger.fine('Stored message=${message.id} in vector store');
+        return;
+      } catch (e, st) {
+        // If embedding specifically failed, log and disable semantic for this operation
+        if (e is EmbeddingException) {
+          ChatMemoryLogger.logError<void>(
+            logger,
+            'storeMessage.embed',
+            e,
+            stackTrace: st,
+            params: opCtx.toMap(),
+          );
+          return;
+        }
+
+        // On other errors, retry a small number of times for transient issues.
+        ChatMemoryLogger.logError<void>(
+          logger,
+          'storeMessage.attempt',
+          e,
+          stackTrace: st,
+          params: {'attempt': attempt, ...opCtx.toMap()},
+        );
+        if (attempt > maxRetries) {
+          // escalate as VectorStoreException after retries
+          final vsEx = VectorStoreException.storageFailure(
+            'Failed to store message ${message.id} after $attempt attempts',
+            cause: e,
+            stackTrace: st,
+            context: opCtx,
+          );
+          ChatMemoryLogger.logError<void>(
+            logger,
+            'storeMessage.failure',
+            vsEx,
+            stackTrace: st,
+            params: opCtx.toMap(),
+            shouldRethrow: false,
+          );
+          // Throw to allow upstream to decide if this is fatal.
+          throw vsEx;
+        }
+        // small backoff
+        await Future.delayed(Duration(milliseconds: 100 * attempt));
+      }
     }
   }
 
@@ -179,32 +354,72 @@ class MemoryManager {
       return;
     }
 
+    final toStore = messages
+        .where(
+          (m) => m.role != MessageRole.system && m.role != MessageRole.summary,
+        )
+        .toList();
+    if (toStore.isEmpty) return;
+
+    final opCtx = ErrorContext(
+      component: 'MemoryManager',
+      operation: 'storeMessageBatch',
+      params: {'count': toStore.length},
+    );
+    final logger = _logger;
+
     try {
-      // Filter out system and summary messages
-      final messagesToStore = messages
-          .where(
-            (m) =>
-                m.role != MessageRole.system && m.role != MessageRole.summary,
-          )
-          .toList();
+      // Validate inputs
+      Validation.validateListNotEmpty('messages', toStore, context: opCtx);
 
-      if (messagesToStore.isEmpty) return;
-
-      // Get embeddings for all messages
-      final texts = messagesToStore.map((m) => m.content).toList();
-      final embeddings = await embeddingService!.embedBatch(texts);
+      // Get embeddings for all messages (with basic retry for embedding service)
+      final texts = toStore.map((m) => m.content).toList();
+      List<List<double>> embeddings;
+      try {
+        embeddings = await embeddingService!.embedBatch(texts);
+      } catch (e, st) {
+        ChatMemoryLogger.logError<void>(
+          logger,
+          'storeMessageBatch.embedBatch',
+          e,
+          stackTrace: st,
+          params: opCtx.toMap(),
+        );
+        // Fail fast for embedding failures since we cannot create vector entries
+        // Use the embedding service's EmbeddingException signature (message, [cause])
+        throw EmbeddingException('Batch embedding failed', e);
+      }
 
       // Create vector entries
       final vectorEntries = <VectorEntry>[];
-      for (int i = 0; i < messagesToStore.length; i++) {
-        final entry = messagesToStore[i].toVectorEntry(embeddings[i]);
-        vectorEntries.add(entry);
+      for (int i = 0; i < toStore.length; i++) {
+        Validation.validateEmbeddingVector(
+          'embedding[$i]',
+          embeddings[i],
+          context: opCtx,
+        );
+        vectorEntries.add(toStore[i].toVectorEntry(embeddings[i]));
       }
 
-      // Store in batch
       await vectorStore!.storeBatch(vectorEntries);
-    } catch (e) {
-      // Log error but don't fail the operation
+      logger.fine(
+        'Stored batch of ${vectorEntries.length} entries in vector store',
+      );
+    } catch (e, st) {
+      // Log and rethrow a VectorStoreException to make failure explicit to callers.
+      ChatMemoryLogger.logError<void>(
+        logger,
+        'storeMessageBatch',
+        e,
+        stackTrace: st,
+        params: opCtx.toMap(),
+      );
+      throw VectorStoreException.storageFailure(
+        'Batch storage failed',
+        cause: e,
+        stackTrace: st,
+        context: opCtx,
+      );
     }
   }
 
@@ -237,15 +452,46 @@ class MemoryManager {
   /// Step 3: Semantic retrieval from vector store
   Future<List<Message>> _performSemanticRetrieval(
     String userQuery,
-    List<Message> messages,
-  ) async {
+    List<Message> messages, {
+    String? correlationId,
+  }) async {
+    final opCtx = ErrorContext(
+      component: 'MemoryManager',
+      operation: '_performSemanticRetrieval',
+      params: {'correlationId': correlationId},
+    );
+    final logger = _logger;
+
     if (vectorStore == null || embeddingService == null) {
+      logger.fine('Semantic retrieval disabled or not configured', {
+        'correlationId': correlationId,
+      });
       return [];
+    }
+
+    // Simple circuit breaker: if repeated failures occurred recently, skip semantic retrieval for a while.
+    if (_semanticFailureCount >= 3 && _lastSemanticFailure != null) {
+      final since = DateTime.now().difference(_lastSemanticFailure!);
+      if (since.inMinutes < 5) {
+        logger.warning(
+          'Semantic retrieval circuit open - skipping semantic ops',
+          {'correlationId': correlationId},
+        );
+        return [];
+      } else {
+        // reset after cooldown
+        _semanticFailureCount = 0;
+      }
     }
 
     try {
       // Get embedding for user query
       final queryEmbedding = await embeddingService!.embed(userQuery);
+      Validation.validateEmbeddingVector(
+        'queryEmbedding',
+        queryEmbedding,
+        context: opCtx,
+      );
 
       // Search for similar messages
       final searchResults = await vectorStore!.search(
@@ -255,10 +501,7 @@ class MemoryManager {
       );
 
       // Convert results back to messages and filter out recent ones
-      final recentMessageIds = messages
-          .take(10) // Consider last 10 messages as "recent"
-          .map((m) => m.id)
-          .toSet();
+      final recentMessageIds = messages.take(10).map((m) => m.id).toSet();
 
       final semanticMessages = <Message>[];
       for (final result in searchResults) {
@@ -281,8 +524,23 @@ class MemoryManager {
         semanticMessages.add(message);
       }
 
+      // Reset failure counter on success
+      _semanticFailureCount = 0;
+      _lastSemanticFailure = null;
+
       return semanticMessages;
-    } catch (e) {
+    } catch (e, st) {
+      // Increment failure counter and record time to enable circuit-breaker fallback
+      _semanticFailureCount++;
+      _lastSemanticFailure = DateTime.now();
+      ChatMemoryLogger.logError<void>(
+        logger,
+        '_performSemanticRetrieval',
+        e,
+        stackTrace: st,
+        params: opCtx.toMap(),
+      );
+      // Graceful degradation: return empty list so caller can continue without semantic augmentation.
       return [];
     }
   }

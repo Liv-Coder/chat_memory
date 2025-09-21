@@ -1,4 +1,3 @@
-import '../models/message.dart';
 import '../utils/token_counter.dart';
 import '../summarizers/summarizer.dart';
 import '../summarizers/deterministic_summarizer.dart';
@@ -9,6 +8,8 @@ import '../vector_stores/local_vector_store.dart';
 import '../vector_stores/in_memory_vector_store.dart';
 import '../embeddings/embedding_service.dart';
 import '../embeddings/simple_embedding_service.dart';
+import '../errors.dart';
+import '../logging/chat_memory_logger.dart';
 import 'memory_manager.dart';
 
 /// Configuration preset for different use cases
@@ -31,6 +32,8 @@ enum MemoryPreset {
 /// Provides easy setup methods for common use cases while allowing
 /// full customization when needed.
 class HybridMemoryFactory {
+  static final _logger = ChatMemoryLogger.loggerFor('factory.hybrid_memory');
+
   /// Create a memory manager with preset configuration
   static Future<MemoryManager> create({
     required MemoryPreset preset,
@@ -41,42 +44,68 @@ class HybridMemoryFactory {
     TokenCounter? customTokenCounter,
     String? databasePath,
   }) async {
-    final tokenCounter = customTokenCounter ?? HeuristicTokenCounter();
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: 'create',
+      params: {
+        'preset': preset.toString(),
+        'maxTokens': maxTokens,
+        'hasCustomSummarizer': customSummarizer != null,
+        'hasCustomEmbedding': customEmbeddingService != null,
+        'hasCustomVectorStore': customVectorStore != null,
+      },
+    );
 
-    switch (preset) {
-      case MemoryPreset.development:
-        return _createDevelopmentSetup(
-          maxTokens: maxTokens,
-          summarizer: customSummarizer,
-          tokenCounter: tokenCounter,
-        );
+    try {
+      Validation.validatePositive('maxTokens', maxTokens, context: ctx);
 
-      case MemoryPreset.production:
-        return await _createProductionSetup(
-          maxTokens: maxTokens,
-          summarizer: customSummarizer,
-          embeddingService: customEmbeddingService,
-          vectorStore: customVectorStore,
-          tokenCounter: tokenCounter,
-          databasePath: databasePath,
-        );
+      final tokenCounter = customTokenCounter ?? HeuristicTokenCounter();
 
-      case MemoryPreset.minimal:
-        return _createMinimalSetup(
-          maxTokens: maxTokens,
-          summarizer: customSummarizer,
-          tokenCounter: tokenCounter,
-        );
+      switch (preset) {
+        case MemoryPreset.development:
+          return _createDevelopmentSetup(
+            maxTokens: maxTokens,
+            summarizer: customSummarizer,
+            tokenCounter: tokenCounter,
+          );
 
-      case MemoryPreset.performance:
-        return await _createPerformanceSetup(
-          maxTokens: maxTokens,
-          summarizer: customSummarizer,
-          embeddingService: customEmbeddingService,
-          vectorStore: customVectorStore,
-          tokenCounter: tokenCounter,
-          databasePath: databasePath,
-        );
+        case MemoryPreset.production:
+          return await _createProductionSetup(
+            maxTokens: maxTokens,
+            summarizer: customSummarizer,
+            embeddingService: customEmbeddingService,
+            vectorStore: customVectorStore,
+            tokenCounter: tokenCounter,
+            databasePath: databasePath,
+          );
+
+        case MemoryPreset.minimal:
+          return _createMinimalSetup(
+            maxTokens: maxTokens,
+            summarizer: customSummarizer,
+            tokenCounter: tokenCounter,
+          );
+
+        case MemoryPreset.performance:
+          return await _createPerformanceSetup(
+            maxTokens: maxTokens,
+            summarizer: customSummarizer,
+            embeddingService: customEmbeddingService,
+            vectorStore: customVectorStore,
+            tokenCounter: tokenCounter,
+            databasePath: databasePath,
+          );
+      }
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'create',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
     }
   }
 
@@ -88,13 +117,48 @@ class HybridMemoryFactory {
     VectorStore? vectorStore,
     EmbeddingService? embeddingService,
   }) {
-    return MemoryManager(
-      contextStrategy: contextStrategy,
-      tokenCounter: tokenCounter,
-      config: memoryConfig ?? const MemoryConfig(),
-      vectorStore: vectorStore,
-      embeddingService: embeddingService,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: 'createCustom',
+      params: {
+        'hasVectorStore': vectorStore != null,
+        'hasEmbeddingService': embeddingService != null,
+      },
     );
+
+    try {
+      final config = memoryConfig ?? const MemoryConfig();
+      // If semantic memory is enabled, ensure required components are present at construction time.
+      if (config.enableSemanticMemory) {
+        if (vectorStore == null) {
+          throw ConfigurationException.missing('vectorStore', context: ctx);
+        }
+        if (embeddingService == null) {
+          throw ConfigurationException.missing(
+            'embeddingService',
+            context: ctx,
+          );
+        }
+      }
+
+      return MemoryManager(
+        contextStrategy: contextStrategy,
+        tokenCounter: tokenCounter,
+        config: config,
+        vectorStore: vectorStore,
+        embeddingService: embeddingService,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'createCustom',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 
   /// Development preset: Fast setup with in-memory storage
@@ -103,29 +167,47 @@ class HybridMemoryFactory {
     Summarizer? summarizer,
     required TokenCounter tokenCounter,
   }) {
-    final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
-
-    final strategy = SummarizationStrategyFactory.balanced(
-      maxTokens: maxTokens,
-      summarizer: effectiveSummarizer,
-      tokenCounter: tokenCounter,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: '_createDevelopmentSetup',
+      params: {'maxTokens': maxTokens},
     );
 
-    final config = MemoryConfig(
-      maxTokens: maxTokens,
-      semanticTopK: 3,
-      minSimilarity: 0.5,
-      enableSemanticMemory: true,
-      enableSummarization: true,
-    );
+    try {
+      final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
 
-    return MemoryManager(
-      contextStrategy: strategy,
-      tokenCounter: tokenCounter,
-      config: config,
-      vectorStore: InMemoryVectorStore(),
-      embeddingService: SimpleEmbeddingService(),
-    );
+      final strategy = SummarizationStrategyFactory.balanced(
+        maxTokens: maxTokens,
+        summarizer: effectiveSummarizer,
+        tokenCounter: tokenCounter,
+      );
+
+      final config = MemoryConfig(
+        maxTokens: maxTokens,
+        semanticTopK: 3,
+        minSimilarity: 0.5,
+        enableSemanticMemory: true,
+        enableSummarization: true,
+      );
+
+      return MemoryManager(
+        contextStrategy: strategy,
+        tokenCounter: tokenCounter,
+        config: config,
+        vectorStore: InMemoryVectorStore(),
+        embeddingService: SimpleEmbeddingService(),
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        '_createDevelopmentSetup',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 
   /// Production preset: Persistent storage with semantic search
@@ -137,36 +219,58 @@ class HybridMemoryFactory {
     required TokenCounter tokenCounter,
     String? databasePath,
   }) async {
-    final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
-    final effectiveEmbeddingService =
-        embeddingService ?? SimpleEmbeddingService();
-    final effectiveVectorStore =
-        vectorStore ?? LocalVectorStore(databasePath: databasePath);
-
-    // Vector store will be initialized on first use
-
-    final strategy = SummarizationStrategyFactory.balanced(
-      maxTokens: maxTokens,
-      summarizer: effectiveSummarizer,
-      tokenCounter: tokenCounter,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: '_createProductionSetup',
+      params: {'maxTokens': maxTokens},
     );
 
-    final config = MemoryConfig(
-      maxTokens: maxTokens,
-      semanticTopK: 5,
-      minSimilarity: 0.3,
-      enableSemanticMemory: true,
-      enableSummarization: true,
-      recencyWeight: 0.3,
-    );
+    try {
+      final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
+      final effectiveEmbeddingService =
+          embeddingService ?? SimpleEmbeddingService();
 
-    return MemoryManager(
-      contextStrategy: strategy,
-      tokenCounter: tokenCounter,
-      config: config,
-      vectorStore: effectiveVectorStore,
-      embeddingService: effectiveEmbeddingService,
-    );
+      // If given vector store is null, create a LocalVectorStore and pass embedding dim when available.
+      final effectiveVectorStore =
+          vectorStore ??
+          LocalVectorStore(
+            databasePath: databasePath,
+            expectedDimension: effectiveEmbeddingService.dimensions,
+          );
+
+      final strategy = SummarizationStrategyFactory.balanced(
+        maxTokens: maxTokens,
+        summarizer: effectiveSummarizer,
+        tokenCounter: tokenCounter,
+      );
+
+      final config = MemoryConfig(
+        maxTokens: maxTokens,
+        semanticTopK: 5,
+        minSimilarity: 0.3,
+        enableSemanticMemory: true,
+        enableSummarization: true,
+        recencyWeight: 0.3,
+      );
+
+      return MemoryManager(
+        contextStrategy: strategy,
+        tokenCounter: tokenCounter,
+        config: config,
+        vectorStore: effectiveVectorStore,
+        embeddingService: effectiveEmbeddingService,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        '_createProductionSetup',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 
   /// Minimal preset: Only summarization, no semantic search
@@ -175,27 +279,45 @@ class HybridMemoryFactory {
     Summarizer? summarizer,
     required TokenCounter tokenCounter,
   }) {
-    final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
-
-    final strategy = SummarizationStrategyFactory.aggressive(
-      maxTokens: maxTokens,
-      summarizer: effectiveSummarizer,
-      tokenCounter: tokenCounter,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: '_createMinimalSetup',
+      params: {'maxTokens': maxTokens},
     );
 
-    final config = MemoryConfig(
-      maxTokens: maxTokens,
-      enableSemanticMemory: false,
-      enableSummarization: true,
-    );
+    try {
+      final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
 
-    return MemoryManager(
-      contextStrategy: strategy,
-      tokenCounter: tokenCounter,
-      config: config,
-      vectorStore: null,
-      embeddingService: null,
-    );
+      final strategy = SummarizationStrategyFactory.aggressive(
+        maxTokens: maxTokens,
+        summarizer: effectiveSummarizer,
+        tokenCounter: tokenCounter,
+      );
+
+      final config = MemoryConfig(
+        maxTokens: maxTokens,
+        enableSemanticMemory: false,
+        enableSummarization: true,
+      );
+
+      return MemoryManager(
+        contextStrategy: strategy,
+        tokenCounter: tokenCounter,
+        config: config,
+        vectorStore: null,
+        embeddingService: null,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        '_createMinimalSetup',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 
   /// Performance preset: Optimized for large conversations
@@ -207,37 +329,58 @@ class HybridMemoryFactory {
     required TokenCounter tokenCounter,
     String? databasePath,
   }) async {
-    final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
-    final effectiveEmbeddingService =
-        embeddingService ?? SimpleEmbeddingService();
-    final effectiveVectorStore =
-        vectorStore ??
-        LocalVectorStore(databasePath: databasePath, tableName: 'perf_vectors');
-
-    // Vector store will be initialized on first use
-
-    final strategy = SummarizationStrategyFactory.aggressive(
-      maxTokens: maxTokens,
-      summarizer: effectiveSummarizer,
-      tokenCounter: tokenCounter,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: '_createPerformanceSetup',
+      params: {'maxTokens': maxTokens},
     );
 
-    final config = MemoryConfig(
-      maxTokens: maxTokens,
-      semanticTopK: 8,
-      minSimilarity: 0.25,
-      enableSemanticMemory: true,
-      enableSummarization: true,
-      recencyWeight: 0.4,
-    );
+    try {
+      final effectiveSummarizer = summarizer ?? DeterministicSummarizer();
+      final effectiveEmbeddingService =
+          embeddingService ?? SimpleEmbeddingService();
 
-    return MemoryManager(
-      contextStrategy: strategy,
-      tokenCounter: tokenCounter,
-      config: config,
-      vectorStore: effectiveVectorStore,
-      embeddingService: effectiveEmbeddingService,
-    );
+      final effectiveVectorStore =
+          vectorStore ??
+          LocalVectorStore(
+            databasePath: databasePath,
+            tableName: 'perf_vectors',
+            expectedDimension: effectiveEmbeddingService.dimensions,
+          );
+
+      final strategy = SummarizationStrategyFactory.aggressive(
+        maxTokens: maxTokens,
+        summarizer: effectiveSummarizer,
+        tokenCounter: tokenCounter,
+      );
+
+      final config = MemoryConfig(
+        maxTokens: maxTokens,
+        semanticTopK: 8,
+        minSimilarity: 0.25,
+        enableSemanticMemory: true,
+        enableSummarization: true,
+        recencyWeight: 0.4,
+      );
+
+      return MemoryManager(
+        contextStrategy: strategy,
+        tokenCounter: tokenCounter,
+        config: config,
+        vectorStore: effectiveVectorStore,
+        embeddingService: effectiveEmbeddingService,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        '_createPerformanceSetup',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 
   /// Helper method to create a memory manager with Google AI services
@@ -248,13 +391,29 @@ class HybridMemoryFactory {
     MemoryPreset preset = MemoryPreset.production,
     String? databasePath,
   }) async {
-    // This would require implementing GoogleAISummarizer and GoogleAIEmbeddingService
-    // For now, falls back to standard services
-    return create(
-      preset: preset,
-      maxTokens: maxTokens,
-      databasePath: databasePath,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: 'createWithGoogleAI',
+      params: {'maxTokens': maxTokens, 'preset': preset.toString()},
     );
+    try {
+      Validation.validatePositive('maxTokens', maxTokens, context: ctx);
+      return create(
+        preset: preset,
+        maxTokens: maxTokens,
+        databasePath: databasePath,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'createWithGoogleAI',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 
   /// Helper method to create a memory manager with OpenAI services
@@ -265,13 +424,29 @@ class HybridMemoryFactory {
     MemoryPreset preset = MemoryPreset.production,
     String? databasePath,
   }) async {
-    // This would require implementing OpenAISummarizer and OpenAIEmbeddingService
-    // For now, falls back to standard services
-    return create(
-      preset: preset,
-      maxTokens: maxTokens,
-      databasePath: databasePath,
+    final ctx = ErrorContext(
+      component: 'HybridMemoryFactory',
+      operation: 'createWithOpenAI',
+      params: {'maxTokens': maxTokens, 'preset': preset.toString()},
     );
+    try {
+      Validation.validatePositive('maxTokens', maxTokens, context: ctx);
+      return create(
+        preset: preset,
+        maxTokens: maxTokens,
+        databasePath: databasePath,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'createWithOpenAI',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
   }
 }
 
@@ -288,6 +463,12 @@ class MemoryManagerBuilder {
   MemoryManagerBuilder();
 
   MemoryManagerBuilder withMaxTokens(int maxTokens) {
+    final ctx = ErrorContext(
+      component: 'MemoryManagerBuilder',
+      operation: 'withMaxTokens',
+      params: {'maxTokens': maxTokens},
+    );
+    Validation.validatePositive('maxTokens', maxTokens, context: ctx);
     _maxTokens = maxTokens;
     return this;
   }
@@ -308,6 +489,7 @@ class MemoryManagerBuilder {
   }
 
   MemoryManagerBuilder withVectorStore(VectorStore vectorStore) {
+    _vectorStoreCompatibilityCheck(vectorStore);
     _vectorStore = vectorStore;
     return this;
   }
@@ -323,12 +505,17 @@ class MemoryManagerBuilder {
   }
 
   MemoryManagerBuilder withLocalVectorStore({String? databasePath}) {
-    _vectorStore = LocalVectorStore(databasePath: databasePath);
+    _vectorStore = LocalVectorStore(
+      databasePath: databasePath,
+      expectedDimension: _embeddingService?.dimensions,
+    );
     return this;
   }
 
   MemoryManagerBuilder withInMemoryVectorStore() {
-    _vectorStore = InMemoryVectorStore();
+    _vectorStore = InMemoryVectorStore(
+      expectedDimension: _embeddingService?.dimensions,
+    );
     return this;
   }
 
@@ -357,26 +544,90 @@ class MemoryManagerBuilder {
   }
 
   MemoryManager build() {
-    final tokenCounter = _tokenCounter ?? HeuristicTokenCounter();
-    final summarizer = _summarizer ?? DeterministicSummarizer();
-
-    final strategy =
-        _strategy ??
-        SummarizationStrategyFactory.balanced(
-          maxTokens: _maxTokens,
-          summarizer: summarizer,
-          tokenCounter: tokenCounter,
-        );
-
-    final config = _config ?? MemoryConfig(maxTokens: _maxTokens);
-
-    return MemoryManager(
-      contextStrategy: strategy,
-      tokenCounter: tokenCounter,
-      config: config,
-      vectorStore: _vectorStore,
-      embeddingService: _embeddingService,
+    final ctx = ErrorContext(
+      component: 'MemoryManagerBuilder',
+      operation: 'build',
+      params: {'maxTokens': _maxTokens},
     );
+    try {
+      final tokenCounter = _tokenCounter ?? HeuristicTokenCounter();
+      final summarizer = _summarizer ?? DeterministicSummarizer();
+
+      final strategy =
+          _strategy ??
+          SummarizationStrategyFactory.balanced(
+            maxTokens: _maxTokens,
+            summarizer: summarizer,
+            tokenCounter: tokenCounter,
+          );
+
+      final config = _config ?? MemoryConfig(maxTokens: _maxTokens);
+
+      // If semantic memory is requested, ensure components are present
+      if (config.enableSemanticMemory) {
+        if (_vectorStore == null) {
+          throw ConfigurationException.missing('vectorStore', context: ctx);
+        }
+        if (_embeddingService == null) {
+          throw ConfigurationException.missing(
+            'embeddingService',
+            context: ctx,
+          );
+        }
+      }
+
+      return MemoryManager(
+        contextStrategy: strategy,
+        tokenCounter: tokenCounter,
+        config: config,
+        vectorStore: _vectorStore,
+        embeddingService: _embeddingService,
+      );
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        ChatMemoryLogger.loggerFor('factory.hybrid_memory'),
+        'build',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
+  }
+
+  void _vectorStoreCompatibilityCheck(VectorStore vs) {
+    // Basic compatibility check placeholder: can be extended.
+    // If embedding service is known, ensure the vector store can accept the dimension.
+    if (_embeddingService != null) {
+      final ctx = ErrorContext(
+        component: 'MemoryManagerBuilder',
+        operation: '_vector_store_compatibilityCheck',
+        params: {'hasEmbeddingService': true},
+      );
+      try {
+        // LocalVectorStore and InMemoryVectorStore accept expectedDimension in constructors;
+        // if a custom VectorStore was provided, we only log a warning.
+        if (vs is LocalVectorStore || vs is InMemoryVectorStore) {
+          // Nothing to validate here because expectedDimension is passed on construction path.
+          return;
+        } else {
+          ChatMemoryLogger.loggerFor('factory.hybrid_memory').warning(
+            'Custom VectorStore provided; ensure embedding dimensionality compatibility with embeddingService',
+            ctx.toMap(),
+          );
+        }
+      } catch (e, st) {
+        ChatMemoryLogger.logError(
+          ChatMemoryLogger.loggerFor('factory.hybrid_memory'),
+          '_vectorStoreCompatibilityCheck',
+          e,
+          stackTrace: st,
+          params: ctx.toMap(),
+          shouldRethrow: false,
+        );
+      }
+    }
   }
 }
 
