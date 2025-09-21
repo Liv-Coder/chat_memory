@@ -602,7 +602,7 @@ class MemoryManagerBuilder {
     if (_embeddingService != null) {
       final ctx = ErrorContext(
         component: 'MemoryManagerBuilder',
-        operation: '_vector_store_compatibilityCheck',
+        operation: 'vectorStoreCompatibilityCheck',
         params: {'hasEmbeddingService': true},
       );
       try {
