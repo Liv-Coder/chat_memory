@@ -16,9 +16,7 @@ pubspec.lock
 
 # Flutter plugin caches & metadata
 .flutter-plugins
-.flutter-plugins-dependencies
 .flutter-versions
-.flutter-plugins-dependencies
 .flutter-plugins
 
 # Build outputs
@@ -86,7 +84,3 @@ coverage/
 # Keep user-specific metadata out
 .idea/
 .vscode/
-
-# NOTE:
-# - Removed Node.js / Next.js specific entries (node_modules/, .next/) because this is a Dart package.
-# - Removed exclusion of `test/` so unit/integration tests are included in the package repository.
