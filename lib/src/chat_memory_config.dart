@@ -39,9 +39,16 @@ enum ChatMemoryPreset {
 ///   preset: ChatMemoryPreset.development,
 ///   maxTokens: 2000,
 ///   enableMemory: true,
+///   useSystemPrompt: true,
+///   systemPrompt: 'You are a helpful assistant.',
 /// );
 /// ```
 class ChatMemoryConfig {
+  /// Default system prompt that provides friendly, helpful behavior.
+  static const String defaultSystemPrompt =
+      "You are a friendly and helpful assistant. Respond in a natural, "
+      "human-like manner. Keep answers clear, concise, and context-aware.";
+
   /// The preset configuration to use as a base.
   final ChatMemoryPreset preset;
 
@@ -60,6 +67,12 @@ class ChatMemoryConfig {
   /// Whether to persist data to storage.
   final bool enablePersistence;
 
+  /// Whether to automatically inject a system prompt.
+  final bool useSystemPrompt;
+
+  /// Custom system prompt text. If null, uses [defaultSystemPrompt].
+  final String? systemPrompt;
+
   /// Creates a new ChatMemoryConfig with the specified settings.
   const ChatMemoryConfig({
     required this.preset,
@@ -68,6 +81,8 @@ class ChatMemoryConfig {
     this.enableSummarization = true,
     this.enableLogging = true,
     this.enablePersistence = false,
+    this.useSystemPrompt = true,
+    this.systemPrompt,
   });
 
   /// Creates a development configuration optimized for fast iteration.
@@ -79,6 +94,7 @@ class ChatMemoryConfig {
       enableSummarization: true,
       enableLogging: true,
       enablePersistence: false,
+      useSystemPrompt: true,
     );
   }
 
@@ -91,6 +107,7 @@ class ChatMemoryConfig {
       enableSummarization: true,
       enableLogging: false,
       enablePersistence: true,
+      useSystemPrompt: true,
     );
   }
 
@@ -103,6 +120,7 @@ class ChatMemoryConfig {
       enableSummarization: false,
       enableLogging: false,
       enablePersistence: false,
+      useSystemPrompt: false,
     );
   }
 
@@ -114,6 +132,8 @@ class ChatMemoryConfig {
     bool? enableSummarization,
     bool? enableLogging,
     bool? enablePersistence,
+    bool? useSystemPrompt,
+    String? systemPrompt,
   }) {
     return ChatMemoryConfig(
       preset: preset ?? this.preset,
@@ -122,6 +142,8 @@ class ChatMemoryConfig {
       enableSummarization: enableSummarization ?? this.enableSummarization,
       enableLogging: enableLogging ?? this.enableLogging,
       enablePersistence: enablePersistence ?? this.enablePersistence,
+      useSystemPrompt: useSystemPrompt ?? this.useSystemPrompt,
+      systemPrompt: systemPrompt ?? this.systemPrompt,
     );
   }
 
@@ -150,6 +172,37 @@ class ChatMemoryConfig {
         ),
       );
     }
+
+    // Validate system prompt configuration
+    if (useSystemPrompt) {
+      final prompt = systemPrompt ?? defaultSystemPrompt;
+      if (prompt.isEmpty) {
+        throw ConfigurationException.invalid(
+          'systemPrompt',
+          'cannot be empty when useSystemPrompt is true',
+          context: ErrorContext(
+            component: 'ChatMemoryConfig',
+            operation: 'validate',
+            params: {
+              'useSystemPrompt': useSystemPrompt,
+              'systemPrompt': systemPrompt,
+            },
+          ),
+        );
+      }
+
+      if (prompt.length > 5000) {
+        throw ConfigurationException.invalid(
+          'systemPrompt',
+          'cannot exceed 5,000 characters for performance reasons',
+          context: ErrorContext(
+            component: 'ChatMemoryConfig',
+            operation: 'validate',
+            params: {'systemPromptLength': prompt.length},
+          ),
+        );
+      }
+    }
   }
 
   /// Converts this configuration to a MemoryPreset for the HybridMemoryFactory.
@@ -173,6 +226,8 @@ class ChatMemoryConfig {
       'enableSummarization': enableSummarization,
       'enableLogging': enableLogging,
       'enablePersistence': enablePersistence,
+      'useSystemPrompt': useSystemPrompt,
+      'systemPrompt': systemPrompt,
     };
   }
 
@@ -191,18 +246,28 @@ class ChatMemoryConfig {
       enableSummarization: json['enableSummarization'] as bool? ?? true,
       enableLogging: json['enableLogging'] as bool? ?? true,
       enablePersistence: json['enablePersistence'] as bool? ?? false,
+      useSystemPrompt: json['useSystemPrompt'] as bool? ?? true,
+      systemPrompt: json['systemPrompt'] as String?,
     );
   }
 
   @override
   String toString() {
+    final promptPreview = systemPrompt != null
+        ? (systemPrompt!.length > 50
+              ? '${systemPrompt!.substring(0, 50)}...'
+              : systemPrompt)
+        : 'default';
+
     return 'ChatMemoryConfig('
         'preset: $preset, '
         'maxTokens: $maxTokens, '
         'enableMemory: $enableMemory, '
         'enableSummarization: $enableSummarization, '
         'enableLogging: $enableLogging, '
-        'enablePersistence: $enablePersistence'
+        'enablePersistence: $enablePersistence, '
+        'useSystemPrompt: $useSystemPrompt, '
+        'systemPrompt: $promptPreview'
         ')';
   }
 
@@ -215,7 +280,9 @@ class ChatMemoryConfig {
         other.enableMemory == enableMemory &&
         other.enableSummarization == enableSummarization &&
         other.enableLogging == enableLogging &&
-        other.enablePersistence == enablePersistence;
+        other.enablePersistence == enablePersistence &&
+        other.useSystemPrompt == useSystemPrompt &&
+        other.systemPrompt == systemPrompt;
   }
 
   @override
@@ -227,6 +294,8 @@ class ChatMemoryConfig {
       enableSummarization,
       enableLogging,
       enablePersistence,
+      useSystemPrompt,
+      systemPrompt,
     );
   }
 }

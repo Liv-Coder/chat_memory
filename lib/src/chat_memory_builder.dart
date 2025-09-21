@@ -23,12 +23,17 @@ import 'memory/memory_manager.dart';
 /// final chatMemory = await ChatMemory.production();
 /// final chatMemory = await ChatMemory.minimal();
 ///
-/// // Custom configuration
+/// // Custom configuration with system prompts
 /// final chatMemory = await ChatMemoryBuilder()
 ///     .development()
+///     .withSystemPrompt('You are a supportive financial coach.')
 ///     .withMaxTokens(4000)
-///     .withSemanticMemory(enabled: true)
-///     .withCallbacks(onSummaryCreated: (summary) => print('Summary: $summary'))
+///     .build();
+///
+/// // Disable system prompt
+/// final chatMemory = await ChatMemoryBuilder()
+///     .minimal()
+///     .withoutSystemPrompt()
 ///     .build();
 /// ```
 class ChatMemoryBuilder {
@@ -75,6 +80,7 @@ class ChatMemoryBuilder {
   /// - Lower token limits for faster processing
   /// - Enhanced logging enabled
   /// - Semantic memory enabled
+  /// - System prompt enabled with default
   ChatMemoryBuilder development() {
     _config = ChatMemoryConfig.development();
     return this;
@@ -86,6 +92,7 @@ class ChatMemoryBuilder {
   /// - Higher token limits for better context
   /// - Logging optimized for performance
   /// - Full semantic memory features
+  /// - System prompt enabled with default
   ChatMemoryBuilder production() {
     _config = ChatMemoryConfig.production();
     return this;
@@ -97,6 +104,7 @@ class ChatMemoryBuilder {
   /// - Minimal token limits
   /// - Basic summarization only
   /// - No semantic memory
+  /// - System prompt disabled for minimal resource usage
   ChatMemoryBuilder minimal() {
     _config = ChatMemoryConfig.minimal();
     return this;
@@ -111,6 +119,70 @@ class ChatMemoryBuilder {
   /// Valid range: 100 - 100,000 tokens
   ChatMemoryBuilder withMaxTokens(int maxTokens) {
     _config = _config.copyWith(maxTokens: maxTokens);
+    return this;
+  }
+
+  /// Set a custom system prompt.
+  ///
+  /// The system prompt provides context and instructions to the AI about
+  /// how it should behave in the conversation. It's automatically injected
+  /// as the first message in every conversation.
+  ///
+  /// [prompt] - The custom system prompt text
+  ///
+  /// Example:
+  /// ```dart
+  /// .withSystemPrompt('You are a supportive financial coach.')
+  /// ```
+  ChatMemoryBuilder withSystemPrompt(String prompt) {
+    _config = _config.copyWith(useSystemPrompt: true, systemPrompt: prompt);
+    return this;
+  }
+
+  /// Use the default system prompt.
+  ///
+  /// Enables system prompt with the built-in friendly assistant behavior.
+  /// This is the default for most presets.
+  ///
+  /// Example:
+  /// ```dart
+  /// .withDefaultSystemPrompt()
+  /// ```
+  ChatMemoryBuilder withDefaultSystemPrompt() {
+    _config = _config.copyWith(
+      useSystemPrompt: true,
+      systemPrompt: null, // Use default
+    );
+    return this;
+  }
+
+  /// Disable system prompt injection.
+  ///
+  /// Prevents any system prompt from being automatically added to
+  /// conversations. Useful for minimal setups or when you want to
+  /// handle system prompts manually.
+  ///
+  /// Example:
+  /// ```dart
+  /// .withoutSystemPrompt()
+  /// ```
+  ChatMemoryBuilder withoutSystemPrompt() {
+    _config = _config.copyWith(useSystemPrompt: false);
+    return this;
+  }
+
+  /// Enable or disable system prompt.
+  ///
+  /// Provides programmatic control over system prompt behavior.
+  ///
+  /// [enabled] - Whether to enable system prompt injection
+  ///
+  /// Example:
+  /// ```dart
+  /// .withSystemPromptEnabled(shouldUseSystemPrompt)
+  /// ```
+  ChatMemoryBuilder withSystemPromptEnabled(bool enabled) {
+    _config = _config.copyWith(useSystemPrompt: enabled);
     return this;
   }
 
@@ -281,11 +353,17 @@ class ChatMemoryBuilder {
         'preset': _config.preset.name,
         'maxTokens': _config.maxTokens,
         'enableMemory': _config.enableMemory,
+        'useSystemPrompt': _config.useSystemPrompt,
+        'systemPromptLength':
+            _config.systemPrompt?.length ??
+            (_config.useSystemPrompt
+                ? ChatMemoryConfig.defaultSystemPrompt.length
+                : 0),
       },
     );
 
     try {
-      // Validate configuration
+      // Validate configuration including system prompt
       _config.validate();
 
       // Create memory manager using HybridMemoryFactory

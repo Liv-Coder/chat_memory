@@ -8,11 +8,14 @@
 /// ```dart
 /// import 'package:chat_memory/chat_memory.dart';
 ///
-/// // Simple usage with the new facade API
+/// // Simple usage with the new facade API and system prompts
 /// final chatMemory = await ChatMemory.development();
 /// await chatMemory.addMessage('Hello!', role: 'user');
 /// final context = await chatMemory.getContext();
-/// print(context.promptText);
+/// print(context.promptText); // Includes system prompt automatically
+///
+/// // Custom system prompt
+/// await chatMemory.updateSystemPrompt('You are a helpful financial advisor.');
 ///
 /// // Advanced usage with the original API
 /// final manager = await EnhancedConversationManager.create();
@@ -42,6 +45,7 @@ export 'core/models/prompt_payload.dart';
 export 'core/utils/token_counter.dart';
 export 'core/utils/message_operations.dart';
 export 'core/utils/token_calculations.dart';
+export 'core/utils/system_prompt_manager.dart';
 
 // -------------------------
 // Conversation management

@@ -7,27 +7,33 @@ import 'chat_memory_builder.dart';
 import 'core/models/message.dart';
 import 'core/errors.dart';
 import 'core/logging/chat_memory_logger.dart';
+import 'core/utils/system_prompt_manager.dart';
 import 'memory/hybrid_memory_factory.dart';
 
 /// Simplified facade for chat memory management.
 ///
 /// Provides a clean, declarative API for managing conversation history with
-/// semantic memory and summarization capabilities. Hides the complexity of
-/// the underlying memory management system while providing full functionality.
+/// semantic memory, summarization, and automatic system prompt management.
+/// Hides the complexity of the underlying memory management system while
+/// providing full functionality.
 ///
 /// Example usage:
 /// ```dart
-/// // Quick setup with presets
+/// // Quick setup with presets (system prompt automatically injected)
 /// final chatMemory = await ChatMemory.development();
 ///
 /// // Add messages to the conversation
 /// await chatMemory.addMessage('Hello!', role: 'user');
 /// await chatMemory.addMessage('Hi there! How can I help?', role: 'assistant');
 ///
-/// // Get context for LLM prompts
+/// // Get context for LLM prompts (includes system prompt)
 /// final context = await chatMemory.getContext(query: 'What greeting did the user use?');
 /// print('Prompt: ${context.promptText}');
 /// print('Token count: ${context.estimatedTokens}');
+///
+/// // Manage system prompts
+/// await chatMemory.updateSystemPrompt('You are a supportive financial coach.');
+/// print('Current system prompt: ${await chatMemory.getSystemPrompt()}');
 ///
 /// // Clear conversation history
 /// await chatMemory.clear();
@@ -36,13 +42,17 @@ class ChatMemory {
   final EnhancedConversationManager _conversationManager;
   final ChatMemoryConfig _config;
   final _logger = ChatMemoryLogger.loggerFor('chat_memory.facade');
+  bool _systemPromptInjected = false;
 
   /// Private constructor used by the builder.
   ChatMemory._({
     required EnhancedConversationManager conversationManager,
     required ChatMemoryConfig config,
   }) : _conversationManager = conversationManager,
-       _config = config;
+       _config = config {
+    // Schedule system prompt injection after construction
+    Timer.run(() => _injectSystemPromptIfNeeded());
+  }
 
   /// Create a ChatMemory instance with development preset.
   ///
@@ -51,16 +61,20 @@ class ChatMemory {
   /// - Lower token limits for faster processing
   /// - Enhanced logging enabled
   /// - Semantic memory enabled with moderate settings
+  /// - System prompt enabled with default friendly assistant behavior
   static Future<ChatMemory> development() async {
+    final config = ChatMemoryConfig.development();
     final conversationManager = await EnhancedConversationManager.create(
       preset: MemoryPreset.development,
-      maxTokens: 2000,
+      maxTokens: config.maxTokens,
     );
 
-    return ChatMemory._(
+    final chatMemory = ChatMemory._(
       conversationManager: conversationManager,
-      config: ChatMemoryConfig.development(),
+      config: config,
     );
+
+    return chatMemory;
   }
 
   /// Create a ChatMemory instance with production preset.
@@ -70,16 +84,20 @@ class ChatMemory {
   /// - Higher token limits for better context
   /// - Logging optimized for performance
   /// - Full semantic memory features enabled
+  /// - System prompt enabled with default friendly assistant behavior
   static Future<ChatMemory> production() async {
+    final config = ChatMemoryConfig.production();
     final conversationManager = await EnhancedConversationManager.create(
       preset: MemoryPreset.production,
-      maxTokens: 8000,
+      maxTokens: config.maxTokens,
     );
 
-    return ChatMemory._(
+    final chatMemory = ChatMemory._(
       conversationManager: conversationManager,
-      config: ChatMemoryConfig.production(),
+      config: config,
     );
+
+    return chatMemory;
   }
 
   /// Create a ChatMemory instance with minimal preset.
@@ -89,16 +107,20 @@ class ChatMemory {
   /// - Lower token limits
   /// - Basic summarization only
   /// - No semantic memory features
+  /// - System prompt disabled for minimal resource usage
   static Future<ChatMemory> minimal() async {
+    final config = ChatMemoryConfig.minimal();
     final conversationManager = await EnhancedConversationManager.create(
       preset: MemoryPreset.minimal,
-      maxTokens: 1000,
+      maxTokens: config.maxTokens,
     );
 
-    return ChatMemory._(
+    final chatMemory = ChatMemory._(
       conversationManager: conversationManager,
-      config: ChatMemoryConfig.minimal(),
+      config: config,
     );
+
+    return chatMemory;
   }
 
   /// Create a builder for custom configuration.
@@ -122,6 +144,9 @@ class ChatMemory {
     String role = 'user',
     Map<String, dynamic>? metadata,
   }) async {
+    // Inject system prompt if needed before adding user messages
+    await _injectSystemPromptIfNeeded();
+
     final ctx = ErrorContext(
       component: 'ChatMemory',
       operation: 'addMessage',
@@ -327,6 +352,79 @@ class ChatMemory {
   bool get isInitialized =>
       true; // Always true since _conversationManager is non-nullable
 
+  /// Update the system prompt for the current conversation.
+  ///
+  /// Replaces the existing system prompt with a new one. The system prompt
+  /// provides context and instructions to the AI about how it should behave.
+  ///
+  /// [prompt] - The new system prompt text
+  ///
+  /// Throws [ArgumentError] if the prompt is invalid.
+  /// Throws [MemoryException] if update fails.
+  Future<void> updateSystemPrompt(String prompt) async {
+    final ctx = ErrorContext(
+      component: 'ChatMemory',
+      operation: 'updateSystemPrompt',
+      params: {'promptLength': prompt.length},
+    );
+
+    try {
+      await SystemPromptManager.updateSystemPrompt(
+        _conversationManager,
+        prompt,
+      );
+      _systemPromptInjected = true;
+
+      _logger.info('System prompt updated', ctx.toMap());
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'updateSystemPrompt',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: true,
+      );
+      rethrow;
+    }
+  }
+
+  /// Get the current system prompt.
+  ///
+  /// Returns the system prompt text if available, null if no system
+  /// prompt is configured or system prompts are disabled.
+  Future<String?> getSystemPrompt() async {
+    final ctx = ErrorContext(
+      component: 'ChatMemory',
+      operation: 'getSystemPrompt',
+    );
+
+    try {
+      if (!_config.useSystemPrompt) {
+        return null;
+      }
+
+      return await SystemPromptManager.getSystemPrompt(_conversationManager);
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        'getSystemPrompt',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: false,
+      );
+      return null;
+    }
+  }
+
+  /// Check if a system prompt is currently active.
+  ///
+  /// Returns true if system prompts are enabled and a prompt has been injected.
+  bool hasSystemPrompt() {
+    return _config.useSystemPrompt && _systemPromptInjected;
+  }
+
   /// Parse string role to MessageRole enum.
   MessageRole _parseMessageRole(String role) {
     switch (role.toLowerCase()) {
@@ -345,6 +443,39 @@ class ChatMemory {
           'role',
           'Invalid message role: $role. Valid roles are: user, assistant, system, summary',
         );
+    }
+  }
+
+  /// Inject system prompt if needed and not already done.
+  Future<void> _injectSystemPromptIfNeeded() async {
+    if (!_config.useSystemPrompt || _systemPromptInjected) {
+      return;
+    }
+
+    final ctx = ErrorContext(
+      component: 'ChatMemory',
+      operation: '_injectSystemPromptIfNeeded',
+    );
+
+    try {
+      final prompt =
+          _config.systemPrompt ?? ChatMemoryConfig.defaultSystemPrompt;
+      await SystemPromptManager.injectSystemPrompt(
+        _conversationManager,
+        prompt,
+      );
+      _systemPromptInjected = true;
+
+      _logger.fine('System prompt injected automatically', ctx.toMap());
+    } catch (e, st) {
+      ChatMemoryLogger.logError(
+        _logger,
+        '_injectSystemPromptIfNeeded',
+        e,
+        stackTrace: st,
+        params: ctx.toMap(),
+        shouldRethrow: false, // Don't fail the entire operation
+      );
     }
   }
 
