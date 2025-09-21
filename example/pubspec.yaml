@@ -1,6 +1,6 @@
 name: example
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -9,6 +9,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  chat_memory:
+    path: ../
+  flutter_markdown: ^0.7.0
+  google_fonts: ^4.0.4
+  google_generative_ai: ^0.2.0
+  http: ^1.1.0
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

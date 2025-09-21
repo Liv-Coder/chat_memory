@@ -6,7 +6,7 @@ import 'dart:convert';
 /// - `user`: message authored by end-user
 /// - `assistant`: message authored by the LLM/assistant
 /// - `system`: system prompt or environment message
-enum MessageRole { user, assistant, system }
+enum MessageRole { user, assistant, system, summary }
 
 /// Immutable message model used by `chat_memory`.
 ///
